@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+hardware/logs/
+hardware/fab/gerbers/
+hardware/*.kicad_prl
+hardware/*-backups/
+hardware/fp-info-cache
+hardware/_autosave-*

@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "cgw")(type "KiCad")(uri "${KIPRJMOD}/lib/cgw.pretty")(options "")(descr "CGW custom footprints"))
+)
