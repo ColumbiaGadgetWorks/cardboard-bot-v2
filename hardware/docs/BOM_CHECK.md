@@ -9,7 +9,7 @@ They change daily. Open each part on <https://jlcpcb.com/parts> before ordering 
 - **Basic** and **Preferred** parts have no feeder fee.
 - Each **Extended** line usually adds about $3 per order.
 - JLC stocks no Basic version of the charger, BMS, balancer, buck, motor driver, power FETs,
-  USB-C, power inductors, NTC or addressable LED. For each of those, the pick is a well-stocked
+  USB-C, power inductors, NTC or addressable LED (D9, now hand-soldered). For each of those, the pick is a well-stocked
   Extended part.
 
 ## Check by hand before paying
@@ -26,7 +26,11 @@ These were checked against the LCSC datasheets (C19191089, C113632, C22461793, C
 Still to check:
 - **Q3 CJAB35P03:** PDFN 3.3 × 3.3 on a PowerPAK 1212-8 footprint (pins 1–3 S, 4 G, pad D).
   Check the pad drawing.
-- **Rotations:** in JLC's placement preview check U1, U2, U3, U5, U7, U8, Q1–Q5, D1–D10 and the LED.
+- **Rotations:** `ROT_FIX` in `gen/fab.py` holds the corrections read off JLC's preview of rev A
+  (U1, U2, U3, U5, U7, U8, Q1–Q5). Check the preview again after uploading the new CPL.
+- **U3 footprint warning:** JLC lists the TPS54202DDCR as SOT-23-6; the board uses KiCad's TSOT-23-6,
+  which is TI's DDC land pattern (same pin pitch and pad positions). The warning is about the name only.
+- **D9 LED:** JLC won't place the XL-5050 LED, so CGW solders a WS2812B 5050 by hand (large pads, easy with an iron).
 
 ## Assembled by JLCPCB (top side)
 
@@ -43,7 +47,6 @@ Still to check:
 | C8678 | SS34 | SS34 | D_SMA | 1 | D3 | Basic | 4,004,526 | $0.0351 |
 | C8598 | B5819W | B5819W SL | D_SOD-123 | 1 | D4 | Basic | 384,842 | $0.0284 |
 | C191023 | 1N5819WS | 1N5819WS | D_SOD-323 | 4 | D5, D6, D7, D8 | Basic | 4,286,668 | $0.0139 |
-| C22461793 | XL-5050RGBC-2812B-S | XL-5050RGBC-2812B-S | LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm | 1 | D9 | Extended ($3 fee) | 778,284 | $0.0330 |
 | C165948 | USB-C CHARGE | TYPE-C-31-M-12 | USB_C_Receptacle_HRO_TYPE-C-31-M-12 | 1 | J1 | Extended ($3 fee) | 367,975 | $0.1872 |
 | C602029 | 2.2uH 4.8A | FHD4020S-2R2MT | L_Cenker_CKCS4030 | 1 | L1 | Extended ($3 fee) | 106,719 | $0.0697 |
 | C602032 | 10uH 2.35A | FHD4020S-100MT | L_Cenker_CKCS4030 | 1 | L2 | Extended ($3 fee) | 99,381 | $0.0640 |
@@ -70,8 +73,8 @@ Still to check:
 | C50506 | DRV8833PWPR | DRV8833PWPR | HTSSOP-16-1EP_4.4x5mm_P0.65mm_EP3.4x5mm_Mask2.46x2.31mm | 1 | U5 | Extended ($3 fee) | 12,910 | $1.9850 |
 | C113632 | HY2213-BB3A | HY2213-BB3A | SOT-23-6 | 2 | U7, U8 | Extended ($3 fee) | 7,568 | $0.1317 |
 
-**37 BOM lines.** Basic: 24, Preferred: 1, Extended: 12 (about $36 in feeder fees per order, if JLC charges them).
-Parts cost about **$6.50 per board** at single-unit prices, so about $32 for 5 boards, before JLC's setup and assembly fees.
+**36 BOM lines.** Basic: 24, Preferred: 1, Extended: 11 (about $33 in feeder fees per order, if JLC charges them).
+Parts cost about **$6.47 per board** at single-unit prices, so about $32 for 5 boards, before JLC's setup and assembly fees.
 
 Cheaper option, not taken: HR8833MTER (C128666, about $0.36) is sold as a DRV8833 drop-in and
 would save about $1.60 per board. Its pinout hasn't been verified here, so U5 stays a genuine DRV8833.
@@ -99,3 +102,4 @@ would save about $1.60 per board. Its pinout hasn't been verified here, so U5 st
 | J9 | ESC PWR 1 | 2P screw terminal 5.08mm (KF301) |
 | J10 | ESC PWR 2 | 2P screw terminal 5.08mm (KF301) |
 | C27 | 470uF 16V | 470uF 16V radial, 8 mm dia, 3.5 mm pitch, low ESR |
+| D9 | XL-5050RGBC-2812B-S | WS2812B 5050 (any brand), soldered by CGW: JLC won't place it |

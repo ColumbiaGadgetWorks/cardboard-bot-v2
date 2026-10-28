@@ -285,7 +285,7 @@ add(dict(ref="D10", sym="Device:D", value="1N4148W", fp="Diode_SMD:D_SOD-123",
          pins={"1": "LED_VDD", "2": V5}))
 add(R("R26", "330R", "LED_DIN3", "LED_DIN", block="led", **R330))
 add(dict(ref="D9", sym="LED:WS2812B", value="XL-5050RGBC-2812B-S", fp="LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm",
-         lcsc="C22461793", mpn="XL-5050RGBC-2812B-S", verified=True, place="jlc", block="led",
+         lcsc="C22461793", mpn="WS2812B 5050 (any brand), soldered by CGW: JLC won't place it", verified=True, place="hand", block="led",
          pins={"1": "LED_VDD", "2": None, "3": GND, "4": "LED_DIN"}))
 add(C("C30", "100nF", "LED_VDD", GND, block="led", **C100N))
 

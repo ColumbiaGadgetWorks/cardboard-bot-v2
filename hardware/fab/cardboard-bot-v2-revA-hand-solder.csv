@@ -18,3 +18,4 @@ J8,IO21,1x3 male header 2.54,
 J9,ESC PWR 1,2P screw terminal 5.08mm (KF301),
 J10,ESC PWR 2,2P screw terminal 5.08mm (KF301),
 C27,470uF 16V,"470uF 16V radial, 8 mm dia, 3.5 mm pitch, low ESR",
+D9,XL-5050RGBC-2812B-S,"WS2812B 5050 (any brand), soldered by CGW: JLC won't place it",C22461793

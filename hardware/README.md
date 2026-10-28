@@ -47,7 +47,7 @@ well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
 - **Battery sense:** VSYS ÷ 4 goes to GPIO3 (ADC) through JP1, a bridged solder jumper under the
   XIAO. To use IO3 as a normal GPIO on J7, cut JP1.
 - **I2C header** J2 (GND, 3V3, SCL, SDA) for add-ons.
-- **Status LED:** an XL-5050RGBC-2812B-S (WS2812B-type). It runs from 5 V through a 1N4148W
+- **Status LED:** a WS2812B-type 5050 LED, soldered by CGW (JLC won't place the XL-5050 part). It runs from 5 V through a 1N4148W
   diode (about 4.2 V), so the ESP32's 3.3 V data line is above the LED's 0.7 × VDD input
   threshold without a level shifter.
 - **Bulk capacitors** C13, C19 and C27 are through-hole radial parts, soldered by CGW.
@@ -89,8 +89,9 @@ The IP2320, HY2213, XL-5050 LED, SMAJ10A and clip were checked against their dat
 
 1. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
    jlcpcb.com/parts. Stock and Basic/Preferred status change daily.
-2. **JLC placement preview.** Check the rotation of every IC, transistor, diode and LED.
-   If one is wrong, fix `ROT_FIX` in `gen/fab.py`, not the CSV.
+2. **JLC placement preview.** `ROT_FIX` in `gen/fab.py` (keyed by LCSC number) holds the corrections
+   read off JLC's first preview. Check every IC, transistor and diode again after uploading;
+   fix that table, not the CSV. JLC flags U3's footprint name (TSOT-23-6 vs SOT-23-6); the pads match.
 3. **Values to sanity-check against the datasheets:**
    - HY2120 RC filter values
    - TPS54202 output inductor (10 µH) and capacitors (2 × 22 µF)

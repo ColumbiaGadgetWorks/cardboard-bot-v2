@@ -1405,7 +1405,7 @@
     (tags "LED RGB NeoPixel PLCC-4 5050")
     (property "LCSC" "C22461793")
     (property "MPN" "XL-5050RGBC-2812B-S")
-    (attr smd)
+    (attr smd exclude_from_pos_files exclude_from_bom)
     (fp_text reference "D9" (at 0 -3.5) (layer "F.SilkS") hide
         (effects (font (size 0.6 0.6) (thickness 0.1)))
       (tstamp 482bfb32-bbcb-4bbe-9876-ac9c5a5a1b46)

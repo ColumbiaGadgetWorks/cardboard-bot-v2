@@ -23,9 +23,19 @@ FAB = os.path.join(HW, "fab")
 # JLC footprint rotation corrections (degrees added to KiCad rotation).
 # Confirm every IC, diode and LED against JLC's placement preview before paying,
 # then fix this table, not the CSV.
+# JLC's models are per part, so the table is keyed by LCSC number. Values were read off
+# JLC's placement preview of rev A (pin-1 dot against KiCad pin 1).
 ROT_FIX = {
-    "HTSSOP-16-1EP_4.4x5mm_P0.65mm_EP3.4x5mm_Mask2.46x2.31mm": -90,   # seen on the Scorbot board
+    "C50506": -90,      # DRV8833PWPR (HTSSOP-16)
+    "C19191089": -90,   # IP2320 (ESOP-8)
+    "C191884": -90,     # TPS54202 (TSOT-23-6)
+    "C18222234": -90,   # HYG015N03LS1C2 (PDFN 5x6)
+    "C504071": -90,     # CJAB35P03 (PDFN 3.3x3.3)
+    "C116509": 180,     # HY2120-CB (SOT-23-6)
+    "C113632": 180,     # HY2213-BB3A (SOT-23-6)
+    "C15127": 180,      # AO3401A (SOT-23)
 }
+LCSC_OF = {p["ref"]: p.get("lcsc", "") for p in circuit.parts}
 
 
 def run(*args):
@@ -55,7 +65,7 @@ def cpl():
     rows = []
     with open(raw) as f:
         for r in csv.DictReader(f):
-            rot = (float(r["Rot"]) + ROT_FIX.get(r["Package"], 0)) % 360
+            rot = (float(r["Rot"]) + ROT_FIX.get(LCSC_OF.get(r["Ref"], ""), 0)) % 360
             rows.append({"Designator": r["Ref"], "Mid X": f'{float(r["PosX"]):.3f}mm',
                          "Mid Y": f'{float(r["PosY"]):.3f}mm', "Layer": "Top", "Rotation": f"{rot:g}"})
     out = os.path.join(FAB, "cardboard-bot-v2-revA-CPL.csv")
