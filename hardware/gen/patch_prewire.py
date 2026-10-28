@@ -34,7 +34,7 @@ for net, pts in gen_pcb.PREVIAS:
     for (x, y) in pts:
         v = pcbnew.PCB_VIA(b)
         v.SetPosition(gen_pcb.mm(x, y))
-        v.SetWidth(pcbnew.FromMM(0.6))
+        v.SetWidth(pcbnew.FromMM(0.5 if net in ("BIN1", "BIN2", "MOTR_B", "MOTL_B", "MOTL_A") else 0.6))
         v.SetDrill(pcbnew.FromMM(0.3))
         v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
         v.SetNet(b.FindNet(net))

@@ -16,12 +16,14 @@ CGW hand-solders all through-hole parts.
 Parts were picked for JLC stock: Basic or no-fee Preferred parts wherever JLC has one, otherwise a
 well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
 
-- **Charging:** USB-C (5 V) feeds an IP2320 2S boost charger (8.40 V CC/CV, 1.0 A). A 10k NTC
-  sits in the gap between the cells and pauses charging if they get hot. A red LED shows USB power
-  is present, and works with the robot switched off.
+- **Charging:** USB-C (5 V) feeds an IP2320 2S boost charger (8.40 V CC/CV, 1.0 A), wired as in
+  the datasheet's typical application. A 10k NTC sits in the gap between the cells and stops
+  charging below about 0 °C or above about 45 °C. The red charge LED is on while charging, off
+  when full, and blinks on a fault. It works with the robot switched off.
 - **Balancing:** one HY2213-BB3A per cell. When a cell passes 4.20 V it switches on a P-FET and a
   100 Ω bleed resistor (about 42 mA) until the other cell catches up.
-- **Cells:** 2 × 18650 in four MY-18650-01 clips on the back. A HY2120 BMS plus two
+- **Cells:** 2 × 18650 in four MY-18650-01 clips on the back. Each clip has three legs, and the
+  two clips of a cell sit 48 mm apart (leg pair to leg pair), per the MYOUNG drawing. A HY2120 BMS plus two
   HYG015N03LS1C2 FETs give over-current, over-charge and over-discharge protection.
   A 20 A mini blade fuse follows.
 - **Power switch:** a slide switch drives the gate of a P-FET (CJAB35P03), so the switch never
@@ -82,28 +84,21 @@ GPIO2, GPIO8 and GPIO9 are strapping pins. They only carry signals that idle hig
 
 ## Before ordering – check these
 
-1. **IP2320 charger circuit.** I couldn't download the datasheet, so pin functions and strap
-   values come from datasheet excerpts found by search. They agree with each other, but check them
-   against the typical-application drawing in the IP2320 datasheet (LCSC C19191089):
-   - pin 1 VSYS (22 µF), pin 2 VOUT to BAT+ (10 µF), pin 6 VIN, pin 7 BST (100 nF to LX),
-     pin 8 LX (2.2 µH to VIN), exposed pad GND
-   - pin 3 VSET left open = 8.40 V, pin 5 LED/ISET left open = 1.0 A
-   - pin 4 NTC: 10k B3380 to GND
-2. **HY2213 balancer.** Pinout from the datasheet excerpt: pin 2 VDD, pin 3 VSS, pin 6 OUT
-   (active low for the BB3A, drives a P-FET), pins 1/4/5 not connected. Check the bleed-circuit
-   drawing in the HY2213 datasheet (LCSC C113632).
-3. **Battery clip leg spacing.** The MY-18650-01 footprint assumes **5.0 mm** between the legs
-   and 1.5 mm holes, because the drawing couldn't be downloaded. Measure a real clip or check
-   the LCSC drawing (C2979183). Then change `CLIP_LEG_PITCH` in `gen/gen_footprints.py` and
-   rebuild the board.
-4. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
+The IP2320, HY2213, XL-5050 LED, SMAJ10A and clip were checked against their datasheets
+(LCSC C19191089, C113632, C22461793, C41376407, C2979183).
+
+1. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
    jlcpcb.com/parts. Stock and Basic/Preferred status change daily.
-5. **JLC placement preview.** Check the rotation of every IC, transistor, diode, LED and the
-   XL-5050 LED's pin 1. If one is wrong, fix `ROT_FIX` in `gen/fab.py`, not the CSV.
-6. **Values to sanity-check against the datasheets:** HY2120 RC filter values, TPS54202 output
-   inductor (10 µH) and capacitors (2 × 22 µF).
-7. **Assembly:** trim the clip, header and capacitor leads flush on the back. Put a layer of
-   Kapton tape under the cells. Fit the fuse last.
+2. **JLC placement preview.** Check the rotation of every IC, transistor, diode and LED.
+   If one is wrong, fix `ROT_FIX` in `gen/fab.py`, not the CSV.
+3. **Values to sanity-check against the datasheets:**
+   - HY2120 RC filter values
+   - TPS54202 output inductor (10 µH) and capacitors (2 × 22 µF)
+   - R4, which is 1 Ω where the IP2320 datasheet shows 0.5 Ω (the nearest Basic value)
+4. **Fit check:** put a real cell in two clips on a printed 1:1 copy of the board before soldering.
+5. **Assembly:** trim the clip, header and capacitor leads flush on the back. Put a layer of
+   Kapton tape under the cells. Fit the fuse last. The two ESC screw terminals overhang the
+   bottom edge, so their wire entries face outward.
 
 ## Regenerating
 

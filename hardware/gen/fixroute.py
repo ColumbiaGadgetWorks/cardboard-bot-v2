@@ -396,6 +396,8 @@ def find_item(board, desc, x, y):
                     d = (q - pos).EuclideanNorm()
                     if bestd is None or d < bestd:
                         bestd, bp, bl, bt = d, q, t.GetLayer(), t
+        if bp is None:      # the track was ripped up earlier in this pass
+            return None, None, None, None
         return net, to_grid(bp.x, bp.y), [0 if bl == pcbnew.F_Cu else 1], bt
     m = re.match(r"Via \[([^\]]*)\]", desc)
     if m:

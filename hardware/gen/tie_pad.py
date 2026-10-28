@@ -1,4 +1,4 @@
-"""Tie a pad to the nearest reachable GND via with the grid router (for pour fragments DRC flags).
+"""Tie a pad to the nearest reachable GND via or through-hole pad with the grid router (for pour fragments DRC flags).
 
 /usr/bin/python3.12 gen/tie_pad.py [--min MM] REF PAD [REF PAD ...]
 --min skips vias closer than MM (they may sit on the same isolated fragment).
@@ -18,10 +18,14 @@ if args and args[0] == "--min":
 for ref, num in zip(args[::2], args[1::2]):
     pad = [p for p in b.FindFootprintByReference(ref).Pads() if p.GetNumber() == num][0]
     vias = [t for t in b.GetTracks() if t.GetClass() == "PCB_VIA" and t.GetNetname() == pad.GetNetname()]
+    # through-hole pads of the net are on both layers too, so they work as targets
+    vias += [q for fp in b.GetFootprints() for q in fp.Pads()
+             if q.GetNetname() == pad.GetNetname() and q.HasHole() and fp.GetReference() != ref]
     vias = [v for v in vias if (v.GetPosition() - pad.GetPosition()).EuclideanNorm() >= pcbnew.FromMM(min_d)]
     vias.sort(key=lambda v: (v.GetPosition() - pad.GetPosition()).EuclideanNorm())
     for v in vias[:12]:
-        path, w = r.route(pad.GetNetname(), pad, v, [0, 1], [0, 1])
+        lays = [0, 1] if pad.HasHole() else [0 if pad.IsOnLayer(pcbnew.F_Cu) else 1]
+        path, w = r.route(pad.GetNetname(), pad, v, lays, [0, 1])
         if path:
             print(f"tied {ref}-{num}: {r.commit(pad.GetNetname(), path, w)} segments")
             break

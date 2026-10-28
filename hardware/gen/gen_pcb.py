@@ -22,71 +22,77 @@ CGW = os.path.join(HW, "lib", "cgw.pretty")
 W, H = 80.0, 46.0          # board size (mm)
 OX, OY = 100.0, 100.0      # board origin on the KiCad page
 CELL_Y = (12.5, 33.5)      # cell centre lines (bottom side)
-CLIP_X = (5.0, 75.0)       # clip leg rows (ESTIMATED, see gen_footprints.py)
+# MY-18650-01 clips: leg pairs of one cell are 48.0 mm apart (MYOUNG WD-CP-0056), centred on the board
+CLIP_X = (16.0, 64.0)      # leg-pair centres; the outboard legs sit 7.6 mm further out (8.4, 71.6)
 
 # ref: (x, y, rotation_deg, side)   side F = top, B = bottom
 PLACE = {
     # --- cells (bottom) ---------------------------------------------------
-    "BT4": (CLIP_X[0], CELL_Y[0], 0, "B"),   # cell A +  -> BAT+
-    "BT2": (CLIP_X[1], CELL_Y[0], 0, "B"),   # cell A -  -> MID
-    "BT3": (CLIP_X[1], CELL_Y[1], 0, "B"),   # cell B +  -> MID
-    "BT1": (CLIP_X[0], CELL_Y[1], 0, "B"),   # cell B -  -> B_NEG
+    "BT4": (CLIP_X[0], CELL_Y[0], 0, "B"),     # cell A +  -> BAT+
+    "BT2": (CLIP_X[1], CELL_Y[0], 180, "B"),   # cell A -  -> MID
+    "BT3": (CLIP_X[1], CELL_Y[1], 180, "B"),   # cell B +  -> MID
+    "BT1": (CLIP_X[0], CELL_Y[1], 0, "B"),     # cell B -  -> B_NEG
     # --- fuse + power switch FET (top left) -------------------------------
     "F1": (10.4, 2.3, 0, "F"),
     "Q3": (27.2, 4.4, 0, "F"),         # PowerPAK 1212-8: source pads left, drain pad right
-    "R11": (25.0, 8.6, 0, "F"),
+    "R11": (25.2, 7.4, 0, "F"),
     "R12": (28.6, 8.6, 0, "F"),
-    # --- USB-C + charger --------------------------------------------------
+    # --- USB-C + IP2320 charger (datasheet fig. 5 layout) ---------------------
     "J1": (3.65, 23.0, 270, "F"),
-    "U1": (16.5, 19.0, 0, "F"),        # IP2320: VSYS/VOUT on the left, VIN/BST/LX on the right
-    "C2": (11.0, 17.1, 180, "F"),      # VSYS cap right at pin 1
-    "C3": (11.0, 19.2, 180, "F"),      # VOUT (BAT+) cap
-    "C4": (21.0, 18.0, 90, "F"),       # BST-LX
-    "L1": (24.0, 18.0, 90, "F"),
-    "C1": (22.6, 21.8, 0, "F"),        # boost input cap
-    "TH1": (15.0, 23.2, 0, "F"),       # in the gap between the two cells
-    "R1": (10.4, 22.4, 0, "F"),
-    "R2": (10.4, 24.8, 0, "F"),
-    "R7": (10.4, 26.3, 0, "F"),
-    "D1": (10.4, 28.0, 180, "F"),
-    # --- cell balancing: top cell under the fuse, bottom cell between the cells --------
-    "R29": (12.6, 11.2, 0, "F"),
-    "C32": (12.6, 12.8, 0, "F"),
-    "U7": (16.2, 12.0, 0, "F"),
-    "Q4": (20.2, 12.0, 0, "F"),
-    "R30": (16.4, 14.9, 0, "F"),
-    "R31": (13.9, 28.2, 0, "F"),
-    "C33": (13.9, 29.8, 0, "F"),
-    "U8": (17.6, 29.0, 0, "F"),
-    "Q5": (21.6, 29.0, 0, "F"),
-    "R32": (24.7, 29.0, 90, "F"),
-    # --- BMS (bottom left) -------------------------------------------------
-    "Q1": (11.8, 36.4, 0, "F"),
-    "Q2": (19.6, 36.4, 180, "F"),
-    "U2": (12.0, 42.4, 0, "F"),
-    "R8": (8.6, 41.0, 90, "F"),
-    "C10": (8.6, 44.1, 90, "F"),
-    "R9": (16.0, 41.0, 0, "F"),
-    "C11": (16.0, 42.6, 0, "F"),
-    "R10": (16.0, 44.2, 0, "F"),
-    "TP7": (19.4, 41.6, 0, "F"),
+    "R1": (10.4, 23.6, 0, "F"),
+    "R2": (10.4, 25.1, 0, "F"),
+    "U1": (16.5, 19.9, 0, "F"),        # VSYS/VOUT/VSET/NTC on the left, LX/BST/VIN/LED on the right
+    "C2": (11.0, 18.0, 180, "F"),      # VSYS cap right at pin 1
+    "C3": (11.0, 20.1, 180, "F"),      # VOUT (BAT+) cap
+    "C6": (11.0, 22.1, 0, "F"),        # VSET cap
+    "C4": (21.0, 18.63, 90, "F"),      # BST-LX
+    "L1": (24.0, 18.9, 90, "F"),
+    "R4": (21.0, 21.95, 90, "F"),      # VIN filter resistor
+    "C1": (23.5, 22.9, 0, "F"),        # inductor input cap
+    "R3": (23.4, 24.7, 0, "F"),        # input load 5.1k
+    "C5": (19.0, 24.45, 0, "F"),       # VIN pin cap
+    "TH1": (14.0, 23.4, 0, "F"),       # in the gap between the two cells
+    "C7": (16.25, 24.1, 90, "F"),       # NTC cap
+    "R7": (24.6, 42.8, 0, "F"),
+    "D1": (24.6, 41.2, 180, "F"),      # charge LED, next to the power switch
+    # --- cell balancing ------------------------------------------------------------
+    "R29": (19.0, 9.0, 0, "F"),
+    "C32": (22.4, 9.0, 0, "F"),
+    "U7": (19.9, 11.9, 0, "F"),
+    "Q4": (24.0, 11.9, 0, "F"),
+    "R30": (21.8, 15.0, 0, "F"),
+    "R31": (12.85, 26.6, 0, "F"),
+    "C33": (12.85, 28.2, 0, "F"),
+    "U8": (16.4, 27.4, 0, "F"),
+    "Q5": (20.4, 27.4, 0, "F"),
+    "R32": (24.6, 27.4, 0, "F"),
+    # --- BMS: controller right of the B- clip, FETs below it ------------------------
+    "U2": (21.4, 34.6, 0, "F"),
+    "R8": (25.4, 31.6, 0, "F"),
+    "C10": (25.4, 33.2, 0, "F"),
+    "R9": (25.4, 34.8, 0, "F"),
+    "C11": (25.4, 36.4, 0, "F"),
+    "R10": (25.4, 38.0, 0, "F"),
+    "Q1": (11.0, 41.6, 0, "F"),
+    "Q2": (18.8, 41.6, 180, "F"),
+    "TP7": (76.0, 22.0, 0, "F"),
     # --- switch / VSYS -------------------------------------------------------
     "SW1": (31.6, 42.6, 0, "F"),
     "D2": (69.6, 4.3, 90, "F"),
     # --- hold-up + buck ------------------------------------------------------
-    "D3": (27.4, 24.6, 0, "F"),
-    "C13": (28.45, 31.8, 0, "F"),      # radial 8 mm, body centre (30.2, 31.8)
+    "D3": (28.8, 24.3, 0, "F"),
+    "C13": (30.25, 31.0, 0, "F"),      # radial 8 mm, body centre (32.0, 31.0)
     "C14": (35.2, 25.2, 90, "F"),
-    "C15": (33.0, 24.6, 90, "F"),
+    "C15": (33.3, 24.6, 90, "F"),
     "U3": (38.4, 26.6, 0, "F"),
     "C16": (38.4, 23.6, 0, "F"),
-    "L2": (43.2, 26.8, 0, "F"),
-    "R13": (37.6, 30.0, 0, "F"),
-    "R14": (37.6, 31.8, 0, "F"),
-    "C17": (47.0, 26.6, 90, "F"),
-    "C18": (49.0, 26.6, 90, "F"),
+    "L2": (43.15, 26.8, 0, "F"),
+    "R13": (38.0, 30.0, 0, "F"),
+    "R14": (38.0, 31.8, 0, "F"),
+    "C17": (46.7, 26.6, 90, "F"),
+    "C18": (48.7, 26.6, 90, "F"),
     "C19": (43.35, 33.6, 0, "F"),      # radial 6.3 mm, body centre (44.6, 33.6)
-    "TP4": (36.0, 34.6, 0, "F"),
+    "TP4": (36.4, 35.8, 0, "F"),
     "D4": (44.6, 5.6, 90, "F"),        # under the XIAO, next to its 5V pin
     "C20": (44.6, 9.8, 90, "F"),
     "C21": (42.6, 9.4, 90, "F"),
@@ -108,37 +114,37 @@ PLACE = {
     # --- RGB LED ---------------------------------------------------------------
     "R26": (43.6, 16.8, 90, "F"),
     "D9": (45.2, 41.4, 0, "F"),
-    "C30": (40.8, 40.4, 90, "F"),
+    "C30": (40.6, 41.4, 90, "F"),
     "D10": (38.8, 36.6, 90, "F"),
     # --- drive -------------------------------------------------------------------
     "J3": (56.0, 5.4, 180, "F"),
-    "J4": (64.4, 5.4, 180, "F"),
+    "J4": (64.4, 4.6, 180, "F"),       # pulled up to clear the MID clip legs
     "U5": (56.0, 13.8, 180, "F"),
-    "R18": (64.15, 15.0, 0, "F"),
-    "R19": (64.15, 12.6, 0, "F"),
+    "R18": (67.0, 15.4, 270, "F"),     # sense resistors between the MID clip legs and the outboard leg
+    "R19": (67.0, 10.6, 90, "F"),
     "C24": (50.6, 10.5, 0, "F"),
     "C23": (56.0, 17.6, 0, "F"),
     "C25": (50.9, 14.78, 180, "F"),
     "C26": (51.7, 13.3, 270, "F"),
     # --- outputs (OUT1, OUT2, IO3, IO21) ------------------------------------------
-    "J5": (52.8, 24.0, 0, "F"),
-    "J6": (56.4, 24.0, 0, "F"),
-    "J7": (60.0, 24.0, 0, "F"),
-    "J8": (63.6, 24.0, 0, "F"),
-    "D5": (52.8, 20.4, 90, "F"),
-    "D6": (56.4, 20.4, 90, "F"),
-    "D7": (60.0, 20.4, 90, "F"),
-    "D8": (63.6, 20.4, 90, "F"),
+    "J5": (51.5, 24.0, 0, "F"),        # J8 stops 2.6 mm short of the MID clip leg at (64, 31)
+    "J6": (55.1, 24.0, 0, "F"),
+    "J7": (58.7, 24.0, 0, "F"),
+    "J8": (62.3, 24.0, 0, "F"),
+    "D5": (51.5, 20.4, 90, "F"),
+    "D6": (55.1, 20.4, 90, "F"),
+    "D7": (58.7, 20.4, 90, "F"),
+    "D8": (62.3, 20.4, 90, "F"),
     "R20": (44.6, 13.4, 90, "F"),
     "R21": (42.6, 13.4, 90, "F"),
     "R22": (44.6, 20.2, 90, "F"),
     "R23": (42.6, 20.2, 90, "F"),
     "C27": (70.4, 26.75, 90, "F"),     # radial 8 mm, body centre (70.4, 25.0)
-    "J9": (52.8, 40.8, 0, "F"),
-    "J10": (64.0, 40.8, 0, "F"),
+    "J9": (52.8, 43.5, 0, "F"),        # screw bodies overhang the bottom edge (wire entry)
+    "J10": (64.0, 43.5, 0, "F"),
 }
 
-
+FRONT_LOGO = (76.2, 16.6)   # 6 mm, top-right corner beside the MID clip
 BACK_LOGO = (40.0, 33.5)    # inside the cell B outline, visible with the cell out
 MOUNT_HOLES = [(3.5, 3.5), (W - 3.5, 3.5), (3.5, H - 3.5), (W - 3.5, H - 3.5)]
 # zip-tie slots (centre x, centre y, length, width) between the cells
@@ -156,55 +162,63 @@ NETCLASSES = {
 # Copper reserved for the high-current nets: (net, layer, x0, y0, x1, y1).
 # prewire() puts router keepouts here; route.py replaces them with solid zones.
 POWER_AREAS = [
-    ("BAT+", "B", 1.0, 0.8, 11.6, 16.6),
+    ("BAT+", "B", 1.0, 0.8, 17.9, 16.9),        # under the cell A + clip and the fuse
     ("VFUSE", "F", 18.9, 0.7, 25.2, 5.5),
-    ("B_NEG", "F", 3.6, 29.5, 9.8, 37.4),
-    ("B_NEG", "B", 1.0, 29.0, 9.0, 38.0),
-    ("BMS_DRAIN", "F", 10.4, 33.6, 21.0, 39.2),
-    ("BMS_DRAIN", "B", 10.4, 33.6, 21.0, 39.2),
-    ("MID", "B", 71.4, 8.0, 79.6, 38.0),
+    ("B_NEG", "B", 1.0, 29.0, 17.9, 38.4),      # under the cell B - clip
+    ("B_NEG", "F", 5.4, 38.6, 9.0, 42.9),       # Q1 source pads
+    ("BMS_DRAIN", "F", 9.6, 38.9, 20.2, 44.3),
+    ("BMS_DRAIN", "B", 9.6, 38.9, 20.2, 44.3),
+    ("MID", "B", 72.6, 8.0, 79.6, 38.0),
 ]
 # Pre-routed wide tracks: (net, layer, width, [points])
 PREWIRE = [
-    ("BAT+", "B", 3.0, [(5.0, 15.0), (5.0, 10.0), (10.4, 5.7), (10.4, 2.3)]),
+    # cell A + clip (three legs) to the fuse
+    ("BAT+", "B", 3.0, [(8.4, 12.5), (10.4, 8.6), (10.4, 2.3)]),
+    ("BAT+", "B", 3.0, [(16.0, 15.0), (16.0, 10.0), (12.6, 6.4), (10.4, 5.7)]),
     ("VFUSE", "F", 2.5, [(20.32, 2.3), (20.32, 5.7)]),
     ("VFUSE", "F", 2.0, [(20.32, 3.9), (25.4, 3.9)]),       # onto the three source pads of Q3
-    ("B_NEG", "B", 3.0, [(5.0, 31.0), (5.0, 36.0)]),
-    ("B_NEG", "F", 3.0, [(5.0, 31.0), (5.0, 36.0)]),
-    ("B_NEG", "F", 2.2, [(5.0, 35.76), (8.9, 35.76)]),
-    ("BMS_DRAIN", "F", 3.0, [(11.8, 36.4), (19.6, 36.4)]),
-    ("MID", "B", 3.0, [(75.0, 10.0), (75.0, 36.0)]),
+    # cell B - clip (three legs) down to the discharge FET sources
+    ("B_NEG", "B", 3.0, [(8.4, 33.5), (16.0, 31.0), (16.0, 36.0), (8.4, 33.5)]),
+    ("B_NEG", "B", 3.0, [(8.4, 33.5), (7.4, 37.0), (7.4, 41.6)]),
+    ("B_NEG", "F", 1.4, [(7.4, 39.4), (7.4, 41.9)]),
+    ("BMS_DRAIN", "F", 3.0, [(11.0, 41.6), (18.8, 41.6)]),
+    # MID: cell A - clip to cell B + clip through the two outboard legs
+    ("MID", "B", 3.0, [(71.6, 12.5), (74.6, 12.5), (74.6, 33.5), (71.6, 33.5)]),
     # VSYS backbone: Q3 tab -> along the top edge -> down the right side -> both ESC terminals
-    ("VSYS", "B", 2.5, [(28.6, 3.4), (30.2, 1.8), (66.8, 1.8), (67.4, 2.4), (67.4, 35.6), (64.0, 38.0),
-                        (54.4, 38.0), (52.8, 40.8)]),
-    ("VSYS", "B", 2.5, [(64.0, 38.0), (64.0, 40.8)]),
+    ("VSYS", "B", 2.5, [(28.6, 3.4), (30.2, 1.8), (66.8, 1.8), (67.4, 2.4)]),
+    # jog right past the sense resistors so their GND ends can drop vias to the bottom pour
+    ("VSYS", "B", 2.0, [(67.4, 2.4), (68.8, 3.8), (68.8, 19.6), (67.4, 21.0)]),
+    ("VSYS", "B", 2.5, [(67.4, 21.0), (67.4, 39.6), (66.6, 40.4), (54.4, 40.4), (52.8, 43.5)]),
+    ("VSYS", "B", 2.5, [(64.0, 40.4), (64.0, 43.5)]),
     ("VSYS", "B", 1.0, [(27.4, 5.05), (27.4, 3.75), (28.2, 3.75), (28.6, 3.4)]),
     ("VSYS", "B", 1.0, [(28.2, 5.05), (28.2, 3.75)]),
     # gate pull-up R11 to VFUSE (the VFUSE pour area is closed to the router)
-    ("VFUSE", "F", 0.5, [(20.32, 5.7), (21.6, 7.2), (23.4, 8.6), (24.2, 8.6)]),
-    # HY2120 VSS to the cell stack bottom (B_NEG pour areas are closed to the router)
-    ("B_NEG", "B", 0.5, [(5.0, 36.0), (7.0, 39.4), (13.9, 39.6)]),
-    ("B_NEG", "F", 0.5, [(13.9, 39.6), (13.9, 40.8), (13.14, 41.45)]),
-    # bottom-cell balancer (C33 / U8 VSS / R32) into the B_NEG pour
-    ("B_NEG", "F", 0.5, [(14.7, 29.8), (14.7, 30.9), (13.6, 32.0), (9.4, 32.0)]),
-    # DRV8833 (rotated 180): sense pins straight to R18/R19, motor outputs via planned vias
-    ("DRV_BISEN", "F", 0.3, [(58.86, 12.83), (62.45, 12.83), (62.69, 12.6)]),
-    ("DRV_AISEN", "F", 0.3, [(58.86, 14.78), (62.47, 14.78), (62.69, 15.0)]),
-    ("MOTR_A", "F", 0.35, [(58.86, 12.17), (59.9, 12.17), (60.6, 11.47), (63.2, 8.87), (64.4, 7.67), (64.4, 5.4)]),
+    ("VFUSE", "F", 0.5, [(20.32, 5.7), (21.6, 6.8), (23.6, 7.4), (24.38, 7.4)]),
+    # bottom-cell balancer C33 into the B_NEG pour
+    ("B_NEG", "F", 0.5, [(13.63, 28.2), (13.63, 29.7)]),
+    # DRV8833 (rotated 180): sense pins out between the MID clip legs to R18/R19, motor outputs via planned vias
+    ("DRV_BISEN", "F", 0.3, [(58.86, 12.83), (61.9, 12.83), (62.5, 12.25), (66.4, 12.25), (67.0, 12.06)]),
+    ("DRV_AISEN", "F", 0.3, [(58.86, 14.78), (62.0, 14.78), (62.7, 13.0), (66.4, 13.0), (67.0, 13.94)]),
+    ("MOTR_A", "F", 0.35, [(58.86, 12.17), (59.9, 12.17), (61.6, 10.47), (61.6, 7.6), (62.6, 6.6), (64.4, 4.6)]),
     ("MOTR_B", "F", 0.3, [(58.86, 13.47), (60.4, 13.47)]),
-    ("MOTR_B", "B", 0.35, [(60.4, 13.47), (60.4, 7.0), (60.9, 6.5), (60.9, 5.4)]),
+    ("MOTR_B", "B", 0.35, [(60.4, 13.47), (60.4, 7.0), (60.9, 6.5), (60.9, 4.6)]),
     ("MOTL_B", "F", 0.3, [(58.86, 14.12), (61.3, 14.12)]),
     ("MOTL_B", "B", 0.35, [(61.3, 14.12), (62.0, 14.82), (62.0, 17.2), (51.8, 17.2), (51.8, 7.0), (52.5, 6.3), (52.5, 5.4)]),
     ("MOTL_A", "F", 0.3, [(58.86, 15.42), (60.4, 15.42)]),
     ("MOTL_A", "B", 0.35, [(60.4, 15.42), (60.4, 16.4), (53.6, 16.4), (53.6, 7.2), (55.4, 6.0), (56.0, 5.4)]),
     ("DRV_SLEEP", "F", 0.25, [(58.86, 16.08), (59.725, 16.08), (59.725, 17.6)]),
-    # IP2320 power loop: LX pin 8 -> C4 -> L1, VIN pin 6 -> L1 -> C1, VSYS pin 1 -> C2, VOUT pin 2 -> C3
-    ("CHG_LX", "F", 0.8, [(19.6, 17.1), (22.6, 17.1)]),
-    ("CHG_BST", "F", 0.3, [(19.6, 18.37), (21.0, 18.78)]),
-    ("VBUS", "F", 0.8, [(19.6, 19.64), (20.6, 19.9), (23.0, 19.9)]),
-    ("VBUS", "F", 0.8, [(22.2, 19.9), (21.65, 21.3), (21.65, 21.8)]),
-    ("CHG_VSYS", "F", 0.6, [(11.95, 17.1), (14.0, 17.1)]),
-    ("BAT+", "F", 0.4, [(11.95, 19.2), (12.9, 18.4), (14.0, 18.37)]),
+    # BIN1 / BIN2 escape left to their own vias, below C24 and left of the bottom-layer VSYS run
+    ("BIN1", "F", 0.25, [(53.14, 11.53), (50.15, 11.53)]),
+    ("BIN2", "F", 0.25, [(53.14, 12.17), (49.5, 12.17)]),
+    # IP2320 power loop (datasheet fig. 5): LX pin 8 -> C4 -> L1, L1 input -> C1 / R4 -> VIN pin 6,
+    # VSYS pin 1 -> C2, VOUT pin 2 -> C3
+    ("CHG_LX", "F", 0.8, [(19.6, 18.0), (22.6, 17.9)]),
+    ("CHG_BST", "F", 0.3, [(19.6, 19.265), (21.0, 19.405)]),
+    ("CHG_VIN", "F", 0.4, [(19.6, 20.535), (20.4, 20.535), (21.0, 21.175)]),
+    ("VBUS", "F", 0.8, [(24.0, 20.6), (22.55, 22.2), (22.55, 22.9)]),
+    ("VBUS", "F", 0.5, [(21.0, 22.725), (22.55, 22.9)]),
+    ("CHG_VSYS", "F", 0.6, [(11.95, 18.0), (14.0, 18.0)]),
+    ("BAT+", "F", 0.4, [(11.95, 20.1), (12.9, 19.3), (14.0, 19.265)]),
     # DRV8833 charge pump / VINT caps on the logic side, VM drops to the bottom-layer VSYS
     ("DRV_VCP", "F", 0.3, [(51.7, 12.82), (53.14, 12.83)]),
     ("DRV_VINT", "F", 0.3, [(51.38, 14.78), (53.14, 14.78)]),
@@ -214,19 +228,24 @@ PREWIRE = [
     ("VSYS", "F", 0.4, [(49.8, 10.5), (50.4, 9.4), (51.0, 9.0)]),
     # C22 (I2C pull-up decoupling) GND: the bottom layer under it is the VSYS backbone, so via to the side
     ("GND", "F", 0.3, [(39.2, 3.83), (40.4, 3.83)]),
+    # sense resistor returns (motor current): straight down to the bottom GND pour
+    ("GND", "F", 0.8, [(67.0, 9.14), (67.0, 7.9)]),
+    ("GND", "F", 0.8, [(67.0, 16.86), (67.0, 18.0)]),
 ]
 # Thermal / current vias: (net, [(x, y), ...])
 PREVIAS = [
-    ("GND", [(16.5 + dx, 19.0 + dy) for dx in (-0.55, 0.55) for dy in (-1.0, 0, 1.0)]),   # U1 EP
+    ("GND", [(16.5 + dx, 19.9 + dy) for dx in (-0.55, 0.55) for dy in (-1.0, 0, 1.0)]),   # U1 EP
     ("GND", [(56.0 + dx, 13.8 + dy) for dx in (-0.9, 0.9) for dy in (-1.5, -0.5, 0.5, 1.5)]),  # U5 EP
     ("VSYS", [(27.4, 3.75), (28.2, 3.75), (27.4, 5.05), (28.2, 5.05)]),                    # Q3 drain pad
-    ("B_NEG", [(13.9, 39.6)]),
+    ("B_NEG", [(13.63, 29.7), (6.4, 39.6), (6.4, 40.8), (6.4, 42.0), (7.4, 39.6), (7.4, 42.2)]),
     ("MOTR_B", [(60.4, 13.47)]),
     ("MOTL_B", [(61.3, 14.12)]),
     ("MOTL_A", [(60.4, 15.42)]),
+    ("BIN1", [(50.15, 11.53)]),
+    ("BIN2", [(49.5, 12.17)]),
     ("VSYS", [(51.0, 13.75), (51.0, 9.0)]),
-    ("GND", [(40.4, 3.83)]),
-    ("BMS_DRAIN", [(11.2, 36.4), (12.6, 36.4), (19.0, 36.4), (20.4, 36.4), (15.7, 36.4)]),  # Q1/Q2 tabs
+    ("GND", [(40.4, 3.83), (67.0, 7.9), (66.2, 7.9), (67.0, 18.0), (66.2, 18.0)]),
+    ("BMS_DRAIN", [(10.4, 41.6), (11.8, 41.6), (18.0, 41.6), (19.4, 41.6), (14.9, 41.6)]),  # Q1/Q2 tabs
 ]
 DEFAULT = (0.25, 0.2, 0.6, 0.3)
 
@@ -316,7 +335,7 @@ def silkscreen(board, fps):
     # charge input + fuse + switch
     add_text(board, "USB-C", 2.2, 17.0, 0.7, F, bold=True)
     add_text(board, "CHARGE", 2.6, 29.1, 0.7, F, bold=True)
-    near("D1", 0, 1.3, "USB", 0.7)
+    near("D1", -1.9, 0, "CHG", 0.7)
     near("F1", 5.6, 1.7, "FUSE 20A", 0.8, bold=True)
     near("SW1", -1.0, -3.6, "OFF", 0.8)
     near("SW1", 4.6, -3.6, "ON", 0.8, bold=True)
@@ -327,7 +346,7 @@ def silkscreen(board, fps):
         near(ref, -3.5, 3.9, "B", 0.7)
     # PWM outputs: pin legend at the left, names under each header
     for i, lab in enumerate(("G", "V+", "S")):
-        add_text(board, lab, PLACE["J5"][0] - 2.3, PLACE["J5"][1] + i * 2.54, 0.7, F)
+        add_text(board, lab, PLACE["J8"][0] + 2.4, PLACE["J8"][1] + i * 2.54, 0.7, F)
     for ref, lab in (("J5", "OUT1"), ("J6", "OUT2"), ("J7", "IO3"), ("J8", "IO21")):
         near(ref, 0, 7.6, lab, 0.7, bold=True)
     # ESC power
@@ -349,10 +368,10 @@ def silkscreen(board, fps):
 
     # bottom: cells, polarity, assembly warnings
     for i, (cy, plus_left) in enumerate(((CELL_Y[0], True), (CELL_Y[1], False))):
-        x0, x1 = 8.0, 72.0
+        x0, x1 = 6.4, 73.6
         add_rect(board, x0, cy - 9.0, x1, cy + 9.0, B, 0.2)
-        add_text(board, "+" if plus_left else "-", x0 + 3.0, cy, 3.0, B, bold=True)
-        add_text(board, "-" if plus_left else "+", x1 - 3.0, cy, 3.0, B, bold=True)
+        add_text(board, "+" if plus_left else "-", x0 + 14.0, cy, 3.0, B, bold=True)
+        add_text(board, "-" if plus_left else "+", x1 - 14.0, cy, 3.0, B, bold=True)
         add_text(board, f"CELL {'AB'[i]}", 26.0, cy + (5.5 if i == 0 else -5.5), 1.2, B, bold=True)
     add_text(board, "TRIM ALL LEADS FLUSH + KAPTON TAPE BEFORE FITTING CELLS", 40.0, 23.0, 0.75, B, bold=True)
     add_text(board, "2S 18650: flat top, unprotected, 20A+, matched pairs", 50.0, CELL_Y[1] + 5.5, 0.7, B)
@@ -379,7 +398,7 @@ def prewire(board, nets):
             v = pcbnew.PCB_VIA(board)
             v.SetPosition(mm(x, y))
             # 0.5 mm vias where they sit between 0.5/0.65 mm pitch pins (JLC: 0.3 drill, 0.45 min dia)
-            v.SetWidth(pcbnew.FromMM(0.5 if net in ("SDA", "SCL", "MOTR_B", "MOTL_B", "MOTL_A") else 0.6))
+            v.SetWidth(pcbnew.FromMM(0.5 if net in ("BIN1", "BIN2", "MOTR_B", "MOTL_B", "MOTL_A") else 0.6))
             v.SetDrill(pcbnew.FromMM(0.3))
             v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
             v.SetNet(nets[net])
@@ -474,10 +493,10 @@ def main():
         fp.Reference().SetVisible(False)
         board.Add(fp)
         fp.SetPosition(mm(x, y))
-    logo = load_fp("cgw:CGW_Logo_7mm")
+    logo = load_fp("cgw:CGW_Logo_6mm")
     logo.SetReference("LOGO1")
     board.Add(logo)
-    logo.SetPosition(mm(24.3, 42.0))
+    logo.SetPosition(mm(*FRONT_LOGO))
     logo_b = load_fp("cgw:CGW_Logo_Small_Back")
     logo_b.SetReference("LOGO2")
     board.Add(logo_b)

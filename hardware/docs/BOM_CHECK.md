@@ -14,11 +14,16 @@ They change daily. Open each part on <https://jlcpcb.com/parts> before ordering 
 
 ## Check by hand before paying
 
-- **U1 IP2320:** compare the circuit with the datasheet's typical application (see hardware/README.md).
-- **U7, U8 HY2213-BB3A:** pin 2 VDD, pin 3 VSS, pin 6 OUT; check against the datasheet.
-- **D2 C41376407 (SMAJ10A)** and **D9 C22461793 (XL-5050RGBC-2812B-S):** the catalogue
-  snapshot has no package text for these. Confirm SMA, and 5050 4-pin with pin 1 = VDD,
-  2 = DOUT, 3 = GND, 4 = DIN, on the JLC page.
+These were checked against the LCSC datasheets (C19191089, C113632, C22461793, C41376407, C2979183):
+- **U1 IP2320:** wired as the datasheet's typical application, including the 2.2 µH inductor, the
+  input RC and 5.1k, the BST, VSET and NTC capacitors, and the charge LED on the LED/ISET pin.
+  R4 is 1 Ω, where the datasheet shows 0.5 Ω (the nearest Basic value).
+- **U7, U8 HY2213-BB3A:** pin 2 VDD (100 Ω + 100 nF), pin 3 VSS, pin 6 OUT (active low, drives a P-FET).
+- **D9 XL-5050RGBC-2812B-S:** pin 1 VDD, 2 DO, 3 GND, 4 DI.
+- **D2 SMAJ10A (C41376407):** SMA (DO-214AC).
+- **BT1–BT4 MY-18650-01:** three legs per clip, Ø1.8 mm holes, 48 mm between the two clips of a cell.
+
+Still to check:
 - **Q3 CJAB35P03:** PDFN 3.3 × 3.3 on a PowerPAK 1212-8 footprint (pins 1–3 S, 4 G, pad D).
   Check the pad drawing.
 - **Rotations:** in JLC's placement preview check U1, U2, U3, U5, U7, U8, Q1–Q5, D1–D10 and the LED.
@@ -30,8 +35,8 @@ They change daily. Open each part on <https://jlcpcb.com/parts> before ordering 
 | C45783 | 22uF | CL21A226MAQNNNE | C_0805_2012Metric | 5 | C1, C17, C18, C2, C20 | Basic | 3,360,923 | $0.2384 |
 | C12530 | 2.2uF | CL05A225MQ5NSNC | C_0402_1005Metric | 1 | C25 | Basic | 4,549,915 | $0.0054 |
 | C15195 | 10nF | CL05B103KB5NNNC | C_0402_1005Metric | 1 | C26 | Basic | 6,322,666 | $0.0041 |
-| C15850 | 10uF | CL21A106KAYNNNE | C_0805_2012Metric | 3 | C14, C23, C3 | Basic | 3,710,191 | $0.0692 |
-| C14663 | 100nF | CC0603KRX7R9BB104 | C_0603_1608Metric | 12 | C10, C11, C15, C16, C21, C22, C24, C30, C31, C32, C33, C4 | Basic | 50,349,394 | $0.0141 |
+| C14663 | 100nF | CC0603KRX7R9BB104 | C_0603_1608Metric | 14 | C10, C11, C15, C16, C21, C22, C24, C30, C31, C32, C33, C4, C6, C7 | Basic | 50,349,394 | $0.0141 |
+| C15850 | 10uF | CL21A106KAYNNNE | C_0805_2012Metric | 4 | C14, C23, C3, C5 | Basic | 3,710,191 | $0.0692 |
 | C2286 | RED | KT-0603R | LED_0603_1608Metric | 1 | D1 | Basic | 7,858,146 | $0.0077 |
 | C81598 | 1N4148W | 1N4148W | D_SOD-123 | 1 | D10 | Basic | 4,633,707 | $0.0124 |
 | C41376407 | SMAJ10A | SMAJ10A | D_SMA | 1 | D2 | Preferred (no fee) | 13,277 | $0.0381 |
@@ -45,7 +50,7 @@ They change daily. Open each part on <https://jlcpcb.com/parts> before ordering 
 | C18222234 | HYG015N03LS1C2 DSG | HYG015N03LS1C2 | PQFN-8-EP_6x5mm_P1.27mm_Generic | 2 | Q1, Q2 | Extended ($3 fee) | 56,579 | $0.3674 |
 | C504071 | CJAB35P03 | CJAB35P03 | Vishay_PowerPAK_1212-8_Single | 1 | Q3 | Extended ($3 fee) | 21,180 | $0.2453 |
 | C15127 | AO3401A | AO3401A | SOT-23 | 2 | Q4, Q5 | Basic | 587,250 | $0.1025 |
-| C23186 | 5.1k | 0603WAF5101T5E | R_0603_1608Metric | 2 | R1, R2 | Basic | 23,749,760 | $0.0015 |
+| C23186 | 5.1k | 0603WAF5101T5E | R_0603_1608Metric | 3 | R1, R2, R3 | Basic | 23,749,760 | $0.0015 |
 | C22975 | 2k | 0603WAF2001T5E | R_0603_1608Metric | 1 | R10 | Basic | 11,836,427 | $0.0024 |
 | C25803 | 100k | 0603WAF1003T5E | R_0603_1608Metric | 2 | R11, R28 | Basic | 19,748,113 | $0.0031 |
 | C25804 | 10k | 0603WAF1002T5E | R_0603_1608Metric | 5 | R12, R14, R17, R21, R23 | Basic | 32,380,385 | $0.0052 |
@@ -53,18 +58,20 @@ They change daily. Open each part on <https://jlcpcb.com/parts> before ordering 
 | C23162 | 4.7k | 0603WAF4701T5E | R_0603_1608Metric | 2 | R15, R16 | Basic | 19,500,720 | $0.0028 |
 | C25334 | 0.1R | 1206W4F100LT5E | R_1206_3216Metric | 2 | R18, R19 | Basic | 552,267 | $0.0091 |
 | C23024 | 300k | 0603WAF3003T5E | R_0603_1608Metric | 1 | R27 | Basic | 594,835 | $0.0042 |
+| C22775 | 100R | 0603WAF1000T5E | R_0603_1608Metric | 2 | R29, R31 | Basic | 11,248,464 | $0.0026 |
 | C17901 | 100R | 1206W4F1000T5E | R_1206_3216Metric | 2 | R30, R32 | Basic | 2,806,189 | $0.0059 |
+| C22936 | 1R | 0603WAF100KT5E | R_0603_1608Metric | 1 | R4 | Basic | 168,770 | $0.0027 |
 | C21190 | 1k | 0603WAF1001T5E | R_0603_1608Metric | 4 | R20, R22, R7, R9 | Basic | 24,277,749 | $0.0020 |
-| C23138 | 330R | 0603WAF3300T5E | R_0603_1608Metric | 6 | R24, R25, R26, R29, R31, R8 | Basic | 3,527,043 | $0.0022 |
+| C23138 | 330R | 0603WAF3300T5E | R_0603_1608Metric | 4 | R24, R25, R26, R8 | Basic | 3,527,043 | $0.0022 |
 | C13564 | 10k B3380 | NCP18XH103F03RB | R_0603_1608Metric | 1 | TH1 | Extended ($3 fee) | 165,967 | $0.0468 |
-| C19191089 | IP2320 | IP2320 | SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm | 1 | U1 | Extended ($3 fee) | 20,831 | $0.2856 |
+| C19191089 | IP2320 | IP2320 | SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.29x3mm | 1 | U1 | Extended ($3 fee) | 20,831 | $0.2856 |
 | C116509 | HY2120-CB | HY2120-CB | SOT-23-6 | 1 | U2 | Extended ($3 fee) | 19,426 | $0.2423 |
 | C191884 | TPS54202DDCR | TPS54202DDCR | TSOT-23-6 | 1 | U3 | Extended ($3 fee) | 299,988 | $0.1786 |
 | C50506 | DRV8833PWPR | DRV8833PWPR | HTSSOP-16-1EP_4.4x5mm_P0.65mm_EP3.4x5mm_Mask2.46x2.31mm | 1 | U5 | Extended ($3 fee) | 12,910 | $1.9850 |
 | C113632 | HY2213-BB3A | HY2213-BB3A | SOT-23-6 | 2 | U7, U8 | Extended ($3 fee) | 7,568 | $0.1317 |
 
-**35 BOM lines.** Basic: 22, Preferred: 1, Extended: 12 (about $36 in feeder fees per order, if JLC charges them).
-Parts cost about **$6.40 per board** at single-unit prices, so about $32 for 5 boards, before JLC's setup and assembly fees.
+**37 BOM lines.** Basic: 24, Preferred: 1, Extended: 12 (about $36 in feeder fees per order, if JLC charges them).
+Parts cost about **$6.50 per board** at single-unit prices, so about $32 for 5 boards, before JLC's setup and assembly fees.
 
 Cheaper option, not taken: HR8833MTER (C128666, about $0.36) is sold as a DRV8833 drop-in and
 would save about $1.60 per board. Its pinout hasn't been verified here, so U5 stays a genuine DRV8833.

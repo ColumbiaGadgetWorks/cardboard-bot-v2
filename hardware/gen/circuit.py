@@ -84,28 +84,34 @@ add(C("C1", "22uF", "VBUS", GND, fp=F0805C, block="charge", **C22U))
 
 # ---------------------------------------------------------------------------
 # 2. IP2320 2S boost charger (5 V USB in, 8.4 V CC/CV out)
-#    Pin map and strap values from the INJOINIC IP2320 V1.00 datasheet:
-#    VSET open = 8.40 V, LED/ISET open = 1.0 A charge current, NTC 10k B3380 to GND.
-#    Check these against the datasheet's typical application before ordering.
+#    Follows the INJOINIC IP2320 V1.00 datasheet, figure 5 (typical application):
+#    VSET open = 8.40 V (100 nF on the pin), RISET open = 1.0 A, LED pin -> 1k -> LED -> GND,
+#    NTC 10k B3380 to GND with 100 nF, VIN pin fed from the input through 0.5-1 R + 10 uF,
+#    5.1k load on the input, 10 uF at the inductor input, 22 uF on VSYS, 10 uF on VOUT.
 # ---------------------------------------------------------------------------
-add(dict(ref="U1", sym="cgw:IP2320", value="IP2320", fp="Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm",
+add(dict(ref="U1", sym="cgw:IP2320", value="IP2320", fp="Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.29x3mm",
          lcsc="C19191089", mpn="IP2320", verified=True, place="jlc", block="charge",
-         pins={"1": "CHG_VSYS", "2": BAT, "3": None, "4": "CHG_NTC", "5": None,
-               "6": "VBUS", "7": "CHG_BST", "8": "CHG_LX", "9": GND}))
+         pins={"1": "CHG_VSYS", "2": BAT, "3": "CHG_VSET", "4": "CHG_NTC", "5": "CHG_LED",
+               "6": "CHG_VIN", "7": "CHG_BST", "8": "CHG_LX", "9": GND}))
 add(dict(ref="L1", sym="Device:L", value="2.2uH 4.8A", fp="Inductor_SMD:L_Cenker_CKCS4030",
          lcsc="C602029", mpn="FHD4020S-2R2MT", verified=True, place="jlc", block="charge",
          pins={"1": "VBUS", "2": "CHG_LX"}))
+add(R("R3", "5.1k", "VBUS", GND, lcsc="C23186", mpn="0603WAF5101T5E", verified=True, block="charge"))
+add(R("R4", "1R", "VBUS", "CHG_VIN", lcsc="C22936", mpn="0603WAF100KT5E", verified=True, block="charge"))  # datasheet R6 0.5R
+add(C("C5", "10uF", "CHG_VIN", GND, fp=F0805C, block="charge", **C10U))
 add(C("C2", "22uF", "CHG_VSYS", GND, fp=F0805C, block="charge", **C22U))      # right at pin 1
 add(C("C3", "10uF", BAT, GND, fp=F0805C, block="charge", **C10U))
 add(C("C4", "100nF", "CHG_BST", "CHG_LX", block="charge", **C100N))
+add(C("C6", "100nF", "CHG_VSET", GND, block="charge", **C100N))
 add(dict(ref="TH1", sym="Device:Thermistor_NTC", value="10k B3380", fp="Resistor_SMD:R_0603_1608Metric",
          lcsc="C13564", mpn="NCP18XH103F03RB", verified=True, place="jlc", block="charge",
          pins={"1": "CHG_NTC", "2": GND}))
-# USB power LED: lit whenever a cable is plugged in, even with the robot switched off
-add(R("R7", "1k", "VBUS", "PWR_LED_A", block="charge", **R1K))
+add(C("C7", "100nF", "CHG_NTC", GND, block="charge", **C100N))
+# Charge LED on the IP2320 LED pin: on while charging, off when full, blinks on a fault
+add(R("R7", "1k", "CHG_LED", "CHG_LED_A", block="charge", **R1K))
 add(dict(ref="D1", sym="Device:LED", value="RED", fp="LED_SMD:LED_0603_1608Metric",
          lcsc="C2286", mpn="KT-0603R", verified=True, place="jlc", block="charge",
-         pins={"1": GND, "2": "PWR_LED_A"}))
+         pins={"1": GND, "2": "CHG_LED_A"}))
 
 # ---------------------------------------------------------------------------
 # 3. Cells, BMS, fuse
@@ -129,13 +135,14 @@ add(dict(ref="Q1", sym="cgw:NMOS_PDFN", value="HYG015N03LS1C2 DSG", fp="Package_
 add(dict(ref="Q2", sym="cgw:NMOS_PDFN", value="HYG015N03LS1C2 CHG", fp="Package_DFN_QFN:PQFN-8-EP_6x5mm_P1.27mm_Generic",
          lcsc="C18222234", mpn="HYG015N03LS1C2", verified=True, place="jlc", block="bms",
          pins={"1": GND, "2": GND, "3": GND, "4": "BMS_CO", "5": "BMS_DRAIN"}))
-# Cell balancing: HY2213-BB3A per cell switches a P-FET + 100R bleed (~42 mA) above 4.20 V
+# Cell balancing (HY2213 datasheet, P-MOSFET example): HY2213-BB3A per cell switches a P-FET + 100R bleed
+# (~42 mA) above 4.20 V. R 100R + C 100nF filter on VDD per the datasheet table.
 for (u, r_in, c_in, q, r_b, top, bot, tag) in (("U7", "R29", "C32", "Q4", "R30", BAT, MID, "BAL1"),
                                                ("U8", "R31", "C33", "Q5", "R32", MID, B_NEG, "BAL2")):
     add(dict(ref=u, sym="cgw:HY2213", value="HY2213-BB3A", fp="Package_TO_SOT_SMD:SOT-23-6",
              lcsc="C113632", mpn="HY2213-BB3A", verified=True, place="jlc", block="bal",
              pins={"1": None, "2": f"{tag}_VDD", "3": bot, "4": None, "5": None, "6": f"{tag}_G"}))
-    add(R(r_in, "330R", top, f"{tag}_VDD", block="bal", **R330))
+    add(R(r_in, "100R", top, f"{tag}_VDD", lcsc="C22775", mpn="0603WAF1000T5E", verified=True, block="bal"))
     add(C(c_in, "100nF", f"{tag}_VDD", bot, block="bal", **C100N))
     add(dict(ref=q, sym="Device:Q_PMOS_GSD", value="AO3401A", fp="Package_TO_SOT_SMD:SOT-23",
              lcsc="C15127", mpn="AO3401A", verified=True, place="jlc", block="bal",
@@ -283,7 +290,7 @@ add(dict(ref="D9", sym="LED:WS2812B", value="XL-5050RGBC-2812B-S", fp="LED_SMD:L
 add(C("C30", "100nF", "LED_VDD", GND, block="led", **C100N))
 
 # Power flags for ERC (nets driven only by passive parts)
-POWER_FLAGS = [GND, "VBUS", BAT, B_NEG, MID, VSYS, VHOLD, V5, V5_XIAO, V3, VFUSE, "CHG_VSYS", "LED_VDD",
+POWER_FLAGS = [GND, "VBUS", BAT, B_NEG, MID, VSYS, VHOLD, V5, V5_XIAO, V3, VFUSE, "CHG_VSYS", "CHG_VIN", "LED_VDD",
                "DRV_VINT", "DRV_VCP", "BAL1_VDD", "BAL2_VDD"]
 
 BLOCK_TITLES = {

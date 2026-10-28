@@ -360,7 +360,7 @@ def main():
         "Generated from hardware/gen/circuit.py (do not hand-edit; edit circuit.py and regenerate).",
         "All connections are made by net labels at pin ends.",
         "XIAO pins: D0 SDA(GPIO2) D1 IO3 D2-D5 DRV8833 AIN1/AIN2/BIN1/BIN2 D6 IO21 D7 OUT2(GPIO20) D8 SCL(GPIO8) D9 LED(GPIO9) D10 OUT1(GPIO10)",
-        "Confirm before ordering: IP2320 typical application (VSET/ISET straps, VSYS/VOUT/VIN caps), HY2213 pinout + bleed circuit, HY2120 RC values.",
+        "IP2320 per INJOINIC V1.00 datasheet fig. 5; HY2213 per HYCON DS-HY2213-V05 P-MOSFET example; clip per MYOUNG WD-CP-0056.",
         "Battery sense: VSYS/4 on GPIO3 through bridged jumper JP1 (cut JP1 to use IO3 as plain GPIO).",
     ]
     for i, n in enumerate(notes):

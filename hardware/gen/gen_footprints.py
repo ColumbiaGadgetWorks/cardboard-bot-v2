@@ -8,12 +8,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HW = os.path.dirname(HERE)
 OUT = os.path.join(HW, "lib", "cgw.pretty")
 
-# MY-18650-01 clip: datasheet not reachable from the build sandbox.
-# ESTIMATED leg pitch and hole size; confirm against the LCSC drawing
-# (C2979183) or a physical clip before ordering, then regenerate.
-CLIP_LEG_PITCH = 5.0     # mm between the two legs (across the cell axis)
-CLIP_DRILL = 1.5         # mm, fits flat legs up to ~1.3 mm diagonal
-CLIP_PAD = 2.6
+# MY-18650-01 clip (LCSC C2979183, MYOUNG drawing WD-CP-0056): three legs per clip, all one
+# piece of metal. Two legs 5.00 mm apart across the cell axis, one leg 7.60 mm outboard on the
+# cell axis. Holes 1.80 mm. The leg pairs of the two clips for one 18650 are 48.00 mm apart.
+CLIP_PAIR = 5.00
+CLIP_OUTBOARD = 7.60
+CLIP_SPACING_18650 = 48.00
+CLIP_DRILL = 1.8
+CLIP_PAD = 3.0
 
 
 def u():
@@ -75,16 +77,18 @@ def xiao():
 
 
 def clip():
-    p = CLIP_LEG_PITCH / 2
-    b = text("reference", "REF**", 0, -5.2, "F.SilkS", 0.8)
-    b += text("value", "MY-18650-01", 0, 5.2, "F.Fab", 0.8)
+    """Origin at the centre of the leg pair; the outboard leg is at -X (rotate 180 for the other end)."""
+    p = CLIP_PAIR / 2
+    b = text("reference", "REF**", -3.8, -5.2, "F.SilkS", 0.8)
+    b += text("value", "MY-18650-01", -3.8, 5.2, "F.Fab", 0.8)
     b += tht("1", 0, -p, CLIP_PAD, CLIP_DRILL)
     b += tht("1", 0, p, CLIP_PAD, CLIP_DRILL)
-    # clip body footprint (estimated 9 x 20 mm), cell sits toward +X or -X depending on side
-    b += rect(-2.0, -10.0, 2.0, 10.0, "F.Fab", 0.1)
-    b += rect(-2.5, -10.25, 2.5, 10.25, "F.CrtYd", 0.05)
-    b += text("user", "VERIFY LEG PITCH", 0, 0, "F.Fab", 0.6)
-    write("Clip_MY-18650-01", b, f"MYOUNG MY-18650-01 18650 clip, LCSC C2979183. Leg pitch {CLIP_LEG_PITCH} mm ESTIMATED")
+    b += tht("1", -CLIP_OUTBOARD, 0, CLIP_PAD, CLIP_DRILL)
+    # clip footprint on the board: 16 mm wide contact plate over the pair, 9.6 mm deep
+    b += rect(-CLIP_OUTBOARD - 1.0, -8.0, 1.0, 8.0, "F.Fab", 0.1)
+    b += rect(-CLIP_OUTBOARD - 1.75, -8.25, 1.75, 8.25, "F.CrtYd", 0.05)
+    write("Clip_MY-18650-01", b, "MYOUNG MY-18650-01 18650 clip, LCSC C2979183: 3 legs, 1.8 mm holes, "
+          "pair 5.0 mm, outboard leg 7.6 mm; pairs 48.0 mm apart for 18650")
 
 
 def logo(size_mm=11.0, name="CGW_Logo", layer="F.SilkS"):
@@ -133,4 +137,5 @@ if __name__ == "__main__":
     clip()
     print("logo rects:", logo(11.0, "CGW_Logo", "F.SilkS"))
     logo(7.0, "CGW_Logo_7mm", "F.SilkS")
+    logo(6.0, "CGW_Logo_6mm", "F.SilkS")
     logo(7.0, "CGW_Logo_Small_Back", "F.SilkS")   # flipped to the back on the board
