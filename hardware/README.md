@@ -13,23 +13,28 @@ CGW hand-solders all through-hole parts.
 
 ## What's on the board
 
-- **Charging:** USB-C (5 V) feeds a BQ25887 2S boost charger with cell balancing. An SMD NTC
-  sits next to the cells for temperature cut-off. The yellow charge LED runs from USB power,
-  so it works with the power switch off.
+Parts were picked for JLC stock: Basic or no-fee Preferred parts wherever JLC has one, otherwise a
+well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
+
+- **Charging:** USB-C (5 V) feeds an IP2320 2S boost charger (8.40 V CC/CV, 1.0 A). A 10k NTC
+  sits in the gap between the cells and pauses charging if they get hot. A red LED shows USB power
+  is present, and works with the robot switched off.
+- **Balancing:** one HY2213-BB3A per cell. When a cell passes 4.20 V it switches on a P-FET and a
+  100 Ω bleed resistor (about 42 mA) until the other cell catches up.
 - **Cells:** 2 × 18650 in four MY-18650-01 clips on the back. A HY2120 BMS plus two
-  CJAC80N03 FETs give over-current, over-charge and over-discharge protection.
+  HYG015N03LS1C2 FETs give over-current, over-charge and over-discharge protection.
   A 20 A mini blade fuse follows.
-- **Power switch:** a slide switch drives the gate of a P-FET (AGM30P05A), so the switch never
+- **Power switch:** a slide switch drives the gate of a P-FET (CJAB35P03), so the switch never
   carries motor current. Charging still works when the switch is off.
-- **VSYS (≈7–8.4 V)** feeds the following:
-  - SMBJ9.0A surge diode
-  - 470 µF + 220 µF bulk capacitors
+- **VSYS (≈6–8.4 V)** feeds the following:
+  - SMAJ10A surge diode
+  - a 470 µF through-hole bulk capacitor by the ESC terminals
   - both ESC screw terminals (J9, J10)
   - the DRV8833
-- **Reset protection:** the TPS563201 5 V buck runs from VSYS behind a Schottky diode and a
-  hold-up capacitor. The ESC current spikes that used to reset the ESP32 can't pull the
+- **Reset protection:** the TPS54202 5 V buck runs from VSYS behind a Schottky diode and a
+  470 µF hold-up capacitor. The ESC current spikes that used to reset the ESP32 can't pull the
   5 V rail down.
-- **Drive:** DRV8833 with 0.15 Ω sense resistors, so each motor is limited to about 1.3 A.
+- **Drive:** DRV8833 with 0.1 Ω sense resistors (Basic part), so each motor is limited to about 2 A.
   Motor outputs go to 3.5 mm screw terminals J3 (left) and J4 (right).
 - **Outputs:** four 3-pin 2.54 mm headers, pinned GND / V+ / SIG:
   - OUT1 (GPIO10) and OUT2 (GPIO20), with 10k pull-downs so ESCs see "low" while the ESP32 boots
@@ -37,8 +42,14 @@ CGW hand-solders all through-hole parts.
 
   V+ is 5 V through a Schottky diode, so a BEC on an ESC can't back-feed the board.
   The firmware decides whether each output drives a servo, an ESC or a plain on/off signal.
-- **I2C header** J2 (GND, 3V3, SCL, SDA) for add-ons. It shares the bus with the charger.
-- **Status LED:** one WS2812B, driven through a 74VHC1GT125 level shifter.
+- **Battery sense:** VSYS ÷ 4 goes to GPIO3 (ADC) through JP1, a bridged solder jumper under the
+  XIAO. To use IO3 as a normal GPIO on J7, cut JP1.
+- **I2C header** J2 (GND, 3V3, SCL, SDA) for add-ons.
+- **Status LED:** an XL-5050RGBC-2812B-S (WS2812B-type). It runs from 5 V through a 1N4148W
+  diode (about 4.2 V), so the ESP32's 3.3 V data line is above the LED's 0.7 × VDD input
+  threshold without a level shifter.
+- **Bulk capacitors** C13, C19 and C27 are through-hole radial parts, soldered by CGW.
+  JLC has no Basic SMD electrolytics, and the old SMD ones were out of stock.
 
 ### XIAO pin map
 
@@ -55,37 +66,44 @@ CGW hand-solders all through-hole parts.
 | D10 | 10 | OUT1 |
 
 GPIO2, GPIO8 and GPIO9 are strapping pins. They only carry signals that idle high at boot
-(I2C pull-ups, and the BOOT button with the LED buffer input), so the chip always boots normally.
+(I2C pull-ups, and the BOOT button with the LED data line), so the chip always boots normally.
 
 ## Firmware notes
 
 - **Quiet boot:** burn the `UART_PRINT_CONTROL` eFuse (or set the GPIO8-based log suppression),
   and build with the console off (`CONFIG_ESP_CONSOLE_NONE`). Then GPIO21 stays silent at power-up.
   The web flasher's first-flash step should do this.
-- The BQ25887 /PG and /INT pins and the DRV8833 nFAULT pin are not connected. Read their
-  status over I2C instead (BQ25887 address 0x6A).
-- BQ25887 CD is tied to GND, so charging is always enabled. Set the charge current and
-  timers over I2C.
+- **Battery voltage:** read GPIO3 with 11 dB attenuation and multiply by 4 (300k / 100k divider).
+  It reads VSYS, so it only works with the power switch on. Use it for the battery gauge, the
+  low-voltage motor cut-off and the "charge me" warning. The charger has no data link to the ESP32.
+- The DRV8833 nFAULT pin is not connected.
 - The DRV8833 nSLEEP pin is pulled up to 5 V, so the driver is always awake. The 1 s failsafe
   in firmware brings both inputs low.
 
 ## Before ordering – check these
 
-1. **Battery clip leg spacing.** The MY-18650-01 footprint assumes **5.0 mm** between the legs
+1. **IP2320 charger circuit.** I couldn't download the datasheet, so pin functions and strap
+   values come from datasheet excerpts found by search. They agree with each other, but check them
+   against the typical-application drawing in the IP2320 datasheet (LCSC C19191089):
+   - pin 1 VSYS (22 µF), pin 2 VOUT to BAT+ (10 µF), pin 6 VIN, pin 7 BST (100 nF to LX),
+     pin 8 LX (2.2 µH to VIN), exposed pad GND
+   - pin 3 VSET left open = 8.40 V, pin 5 LED/ISET left open = 1.0 A
+   - pin 4 NTC: 10k B3380 to GND
+2. **HY2213 balancer.** Pinout from the datasheet excerpt: pin 2 VDD, pin 3 VSS, pin 6 OUT
+   (active low for the BB3A, drives a P-FET), pins 1/4/5 not connected. Check the bleed-circuit
+   drawing in the HY2213 datasheet (LCSC C113632).
+3. **Battery clip leg spacing.** The MY-18650-01 footprint assumes **5.0 mm** between the legs
    and 1.5 mm holes, because the drawing couldn't be downloaded. Measure a real clip or check
    the LCSC drawing (C2979183). Then change `CLIP_LEG_PITCH` in `gen/gen_footprints.py` and
    rebuild the board.
-2. **LCSC part numbers.** Go through `docs/BOM_CHECK.md` line by line on jlcpcb.com/parts.
-   Each number was confirmed with a web search, but stock and Basic/Extended status change.
-   R13 (56k, C23206) was out of stock in one snapshot; C25603 (5 %) works too.
-3. **JLC placement preview.** Check the rotation of every IC, diode, LED and polarised capacitor.
-   If one is wrong, fix `ROT_FIX` in `gen/fab.py`, not the CSV.
-4. **Values to sanity-check against the datasheets:**
-   - BQ25887 ILIM/PSEL straps
-   - HY2120 RC filter values
-   - L2 saturation current (2 A part, ~1 A peak load)
-5. **Assembly:** trim the clip and header leads flush on the back. Put a layer of Kapton tape
-   under the cells. Fit the fuse last.
+4. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
+   jlcpcb.com/parts. Stock and Basic/Preferred status change daily.
+5. **JLC placement preview.** Check the rotation of every IC, transistor, diode, LED and the
+   XL-5050 LED's pin 1. If one is wrong, fix `ROT_FIX` in `gen/fab.py`, not the CSV.
+6. **Values to sanity-check against the datasheets:** HY2120 RC filter values, TPS54202 output
+   inductor (10 µH) and capacitors (2 × 22 µF).
+7. **Assembly:** trim the clip, header and capacitor leads flush on the back. Put a layer of
+   Kapton tape under the cells. Fit the fuse last.
 
 ## Regenerating
 
@@ -102,6 +120,8 @@ $PY gen/route.py --stage zones         # GND pours (both layers) + solid power p
 $PY gen/fixroute.py                    # A* grid router for every remaining connection (rips up and retries)
 $PY gen/route.py --stage stitch        # GND stitching vias
 $PY gen/islands.py                     # ties any leftover GND pour islands
+$PY gen/gnd_check.py                   # lists GND copper cut off from the main cluster (DRC won't say where)
+(cd gen && $PY tie_pad.py --min 3 REF PAD)   # route a stranded pad to a GND via, if gnd_check finds one
 $PY gen/route.py --stage drop-keepouts && $PY gen/route.py --stage fill
 $PY gen/silk.py                        # redraw labels only (safe on a routed board)
 $PY gen/drc.py                         # DRC summary
@@ -113,7 +133,7 @@ bash gen/render.sh                     # PNG previews
 20 minutes. After small changes it is usually easier to edit `cardboard-bot.kicad_pcb` in KiCad directly.
 `gen/patch_prewire.py NET,...` re-applies the fixed copper of individual nets on a routed board.
 
-Rev A was routed with `gen/fixroute.py`. `gen/route.py` can also run Freerouting if you have
+This board was routed with `gen/fixroute.py`. `gen/route.py` can also run Freerouting if you have
 Java and `freerouting.jar` installed (`route.py` with no arguments).
 
 ## Preview

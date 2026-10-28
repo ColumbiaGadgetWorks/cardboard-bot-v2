@@ -30,8 +30,7 @@ EDGE = 0.45                  # copper to board edge
 VIA_D, VIA_DRILL = 0.6, 0.3
 SAFE = 0.035                 # rasterisation allowance (about half a grid diagonal)
 LAYERS = (pcbnew.F_Cu, pcbnew.B_Cu)
-QFN_NETS = {"BAT+", "MID", "PMID", "CHG_SW", "CHG_SNS", "VBUS", "REGN", "CHG_CBSET", "GND", "CHG_TS",
-            "CHG_PG", "CHG_STAT", "CHG_CD", "SDA", "SCL", "CHG_INT", "CHG_BTST"}
+QFN_NETS = {"GND"}            # nets that must fit between 0.65 mm pitch pins (DRV8833 GND)
 
 
 def to_grid(x_nm, y_nm):

@@ -97,16 +97,6 @@ def hand_list():
     return out
 
 
-def bom_check(groups):
-    """Markdown table for the human C-number check (see hardware/docs/BOM_CHECK.md)."""
-    lines = ["| LCSC | Expected part | MPN | Footprint | Qty | Designators | Search-verified |",
-             "|---|---|---|---|---|---|---|"]
-    for g in sorted(groups.values(), key=lambda g: g["refs"][0]):
-        lines.append(f'| {g["LCSC Part #"]} | {g["Comment"]} | {g["mpn"]} | {g["Footprint"]} | '
-                     f'{len(g["refs"])} | {", ".join(sorted(g["refs"]))} | {"yes" if g["verified"] else "**NO**"} |')
-    return "\n".join(lines)
-
-
 def main():
     os.makedirs(FAB, exist_ok=True)
     z = gerbers()
@@ -121,8 +111,6 @@ def main():
         print("MISMATCH  only in CPL:", sorted(cpl_refs - bom_refs), " only in BOM:", sorted(bom_refs - cpl_refs))
         sys.exit(1)
     print("BOM and CPL designators match")
-    with open(os.path.join(FAB, "bom_check_table.md"), "w") as f:
-        f.write(bom_check(groups) + "\n")
 
 
 if __name__ == "__main__":

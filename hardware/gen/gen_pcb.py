@@ -33,30 +33,33 @@ PLACE = {
     "BT1": (CLIP_X[0], CELL_Y[1], 0, "B"),   # cell B -  -> B_NEG
     # --- fuse + power switch FET (top left) -------------------------------
     "F1": (10.4, 2.3, 0, "F"),
-    "Q3": (27.2, 4.4, 0, "F"),
+    "Q3": (27.2, 4.4, 0, "F"),         # PowerPAK 1212-8: source pads left, drain pad right
     "R11": (25.0, 8.6, 0, "F"),
     "R12": (28.6, 8.6, 0, "F"),
     # --- USB-C + charger --------------------------------------------------
     "J1": (3.65, 23.0, 270, "F"),
-    "L1": (19.4, 13.4, 0, "F"),
-    "C2": (14.4, 13.4, 90, "F"),
-    "C3": (12.4, 13.4, 90, "F"),
-    "C1": (10.2, 15.4, 90, "F"),
-    "U1": (15.4, 18.6, 0, "F"),
-    "C6": (20.2, 19.2, 90, "F"),
-    "C7": (22.2, 19.2, 90, "F"),
-    "C8": (20.2, 22.8, 90, "F"),
-    "C9": (22.2, 22.8, 90, "F"),
-    "C5": (18.4, 23.7, 270, "F"),
-    "C4": (22.9, 16.0, 90, "F"),
-    "R5": (17.0, 26.0, 0, "F"),
-    "R6": (17.0, 27.6, 0, "F"),
-    "TH1": (21.2, 26.6, 90, "F"),      # over the gap between the cells
-    "R7": (10.0, 20.1, 90, "F"),
-    "D1": (11.2, 17.85, 180, "F"),
-    "R3": (17.4, 30.4, 0, "F"),
+    "U1": (16.5, 19.0, 0, "F"),        # IP2320: VSYS/VOUT on the left, VIN/BST/LX on the right
+    "C2": (11.0, 17.1, 180, "F"),      # VSYS cap right at pin 1
+    "C3": (11.0, 19.2, 180, "F"),      # VOUT (BAT+) cap
+    "C4": (21.0, 18.0, 90, "F"),       # BST-LX
+    "L1": (24.0, 18.0, 90, "F"),
+    "C1": (22.6, 21.8, 0, "F"),        # boost input cap
+    "TH1": (15.0, 23.2, 0, "F"),       # in the gap between the two cells
     "R1": (10.4, 22.4, 0, "F"),
     "R2": (10.4, 24.8, 0, "F"),
+    "R7": (10.4, 26.3, 0, "F"),
+    "D1": (10.4, 28.0, 180, "F"),
+    # --- cell balancing: top cell under the fuse, bottom cell between the cells --------
+    "R29": (12.6, 11.2, 0, "F"),
+    "C32": (12.6, 12.8, 0, "F"),
+    "U7": (16.2, 12.0, 0, "F"),
+    "Q4": (20.2, 12.0, 0, "F"),
+    "R30": (16.4, 14.9, 0, "F"),
+    "R31": (13.9, 28.2, 0, "F"),
+    "C33": (13.9, 29.8, 0, "F"),
+    "U8": (17.6, 29.0, 0, "F"),
+    "Q5": (21.6, 29.0, 0, "F"),
+    "R32": (24.7, 29.0, 90, "F"),
     # --- BMS (bottom left) -------------------------------------------------
     "Q1": (11.8, 36.4, 0, "F"),
     "Q2": (19.6, 36.4, 180, "F"),
@@ -70,10 +73,9 @@ PLACE = {
     # --- switch / VSYS -------------------------------------------------------
     "SW1": (31.6, 42.6, 0, "F"),
     "D2": (69.6, 4.3, 90, "F"),
-    "C12": (70.0, 14.0, 90, "F"),
     # --- hold-up + buck ------------------------------------------------------
     "D3": (27.4, 24.6, 0, "F"),
-    "C13": (29.4, 31.4, 0, "F"),
+    "C13": (28.45, 31.8, 0, "F"),      # radial 8 mm, body centre (30.2, 31.8)
     "C14": (35.2, 25.2, 90, "F"),
     "C15": (33.0, 24.6, 90, "F"),
     "U3": (38.4, 26.6, 0, "F"),
@@ -83,7 +85,7 @@ PLACE = {
     "R14": (37.6, 31.8, 0, "F"),
     "C17": (47.0, 26.6, 90, "F"),
     "C18": (49.0, 26.6, 90, "F"),
-    "C19": (44.6, 33.6, 0, "F"),
+    "C19": (43.35, 33.6, 0, "F"),      # radial 6.3 mm, body centre (44.6, 33.6)
     "TP4": (36.0, 34.6, 0, "F"),
     "D4": (44.6, 5.6, 90, "F"),        # under the XIAO, next to its 5V pin
     "C20": (44.6, 9.8, 90, "F"),
@@ -95,16 +97,19 @@ PLACE = {
     "C22": (39.2, 4.6, 90, "F"),
     "R17": (60.5, 17.6, 180, "F"),
     "TP5": (39.0, 9.0, 0, "F"),
+    "JP1": (35.4, 10.4, 90, "F"),       # VBAT sense -> IO3, cut to free IO3
+    "R27": (36.6, 14.4, 90, "F"),
+    "R28": (38.4, 14.4, 90, "F"),
+    "C31": (38.4, 17.6, 90, "F"),
     "TP6": (39.0, 11.6, 0, "F"),
-    "J2": (27.5, 12.0, 0, "F"),
+    "J2": (28.1, 12.0, 0, "F"),
     "R24": (35.6, 7.0, 0, "F"),
     "R25": (35.6, 20.0, 0, "F"),
     # --- RGB LED ---------------------------------------------------------------
-    "U6": (40.6, 16.6, 0, "F"),
-    "C29": (39.8, 19.4, 0, "F"),
     "R26": (43.6, 16.8, 90, "F"),
     "D9": (45.2, 41.4, 0, "F"),
     "C30": (40.8, 40.4, 90, "F"),
+    "D10": (38.8, 36.6, 90, "F"),
     # --- drive -------------------------------------------------------------------
     "J3": (56.0, 5.4, 180, "F"),
     "J4": (64.4, 5.4, 180, "F"),
@@ -128,7 +133,7 @@ PLACE = {
     "R21": (42.6, 13.4, 90, "F"),
     "R22": (44.6, 20.2, 90, "F"),
     "R23": (42.6, 20.2, 90, "F"),
-    "C27": (70.4, 25.0, 90, "F"),
+    "C27": (70.4, 26.75, 90, "F"),     # radial 8 mm, body centre (70.4, 25.0)
     "J9": (52.8, 40.8, 0, "F"),
     "J10": (64.0, 40.8, 0, "F"),
 }
@@ -143,9 +148,9 @@ NETCLASSES = {
     # name: (track, clearance, via_dia, via_drill, nets). Router widths; the heavy
     # current paths get extra copper from prewire() and the zones in route.py.
     "Pwr05": (0.5, 0.2, 0.8, 0.4, ["VSYS", "VFUSE", "B_NEG", "BMS_DRAIN", "+5V", "+5V_XIAO", "VHOLD",
-                                   "BUCK_SW", "OUT1_VP", "OUT2_VP", "IO3_VP", "IO21_VP"]),
-    "Pwr03": (0.3, 0.2, 0.6, 0.3, ["BAT+", "MID", "PMID", "CHG_SW", "CHG_SNS", "VBUS", "REGN",
-                                   "CHG_CBSET", "GND"]),
+                                   "BUCK_SW", "OUT1_VP", "OUT2_VP", "IO3_VP", "IO21_VP",
+                                   "VBUS", "CHG_LX", "CHG_VSYS"]),
+    "Pwr03": (0.3, 0.2, 0.6, 0.3, ["BAT+", "MID", "GND", "BAL1_D", "BAL2_D"]),
     "Motor": (0.4, 0.2, 0.8, 0.4, ["MOTL_A", "MOTL_B", "MOTR_A", "MOTR_B", "DRV_AISEN", "DRV_BISEN"]),
 }
 # Copper reserved for the high-current nets: (net, layer, x0, y0, x1, y1).
@@ -163,7 +168,7 @@ POWER_AREAS = [
 PREWIRE = [
     ("BAT+", "B", 3.0, [(5.0, 15.0), (5.0, 10.0), (10.4, 5.7), (10.4, 2.3)]),
     ("VFUSE", "F", 2.5, [(20.32, 2.3), (20.32, 5.7)]),
-    ("VFUSE", "F", 2.0, [(20.32, 3.77), (24.47, 3.77)]),
+    ("VFUSE", "F", 2.0, [(20.32, 3.9), (25.4, 3.9)]),       # onto the three source pads of Q3
     ("B_NEG", "B", 3.0, [(5.0, 31.0), (5.0, 36.0)]),
     ("B_NEG", "F", 3.0, [(5.0, 31.0), (5.0, 36.0)]),
     ("B_NEG", "F", 2.2, [(5.0, 35.76), (8.9, 35.76)]),
@@ -173,20 +178,15 @@ PREWIRE = [
     ("VSYS", "B", 2.5, [(28.6, 3.4), (30.2, 1.8), (66.8, 1.8), (67.4, 2.4), (67.4, 35.6), (64.0, 38.0),
                         (54.4, 38.0), (52.8, 40.8)]),
     ("VSYS", "B", 2.5, [(64.0, 38.0), (64.0, 40.8)]),
-    ("VSYS", "B", 1.0, [(27.0, 5.4), (27.0, 3.4), (28.6, 3.4)]),
-    ("VSYS", "B", 1.0, [(28.6, 5.4), (28.6, 3.4)]),
+    ("VSYS", "B", 1.0, [(27.4, 5.05), (27.4, 3.75), (28.2, 3.75), (28.6, 3.4)]),
+    ("VSYS", "B", 1.0, [(28.2, 5.05), (28.2, 3.75)]),
     # gate pull-up R11 to VFUSE (the VFUSE pour area is closed to the router)
     ("VFUSE", "F", 0.5, [(20.32, 5.7), (21.6, 7.2), (23.4, 8.6), (24.2, 8.6)]),
     # HY2120 VSS to the cell stack bottom (B_NEG pour areas are closed to the router)
     ("B_NEG", "B", 0.5, [(5.0, 36.0), (7.0, 39.4), (13.9, 39.6)]),
     ("B_NEG", "F", 0.5, [(13.9, 39.6), (13.9, 40.8), (13.14, 41.45)]),
-    # BQ25887 I2C escape: vias at the pad ends, bottom layer to the I2C header (J2 pin3 SCL, pin4 SDA)
-    ("SDA", "F", 0.25, [(13.06, 18.85), (12.55, 18.85)]),
-    ("SDA", "B", 0.25, [(12.55, 18.85), (12.55, 16.9), (13.2, 16.25), (26.2, 16.25), (26.2, 19.0), (26.82, 19.62), (27.5, 19.62)]),
-    ("SCL", "F", 0.25, [(13.06, 19.35), (12.85, 19.35), (12.35, 19.95)]),
-    ("SCL", "B", 0.25, [(12.35, 19.95), (11.8, 19.4), (11.8, 16.1), (12.45, 15.45), (26.6, 15.45), (27.5, 16.35), (27.5, 17.08)]),
-    # BQ25887 CD pin straight into the exposed pad (GND)
-    ("GND", "F", 0.25, [(13.46, 18.35), (14.3, 18.35)]),
+    # bottom-cell balancer (C33 / U8 VSS / R32) into the B_NEG pour
+    ("B_NEG", "F", 0.5, [(14.7, 29.8), (14.7, 30.9), (13.6, 32.0), (9.4, 32.0)]),
     # DRV8833 (rotated 180): sense pins straight to R18/R19, motor outputs via planned vias
     ("DRV_BISEN", "F", 0.3, [(58.86, 12.83), (62.45, 12.83), (62.69, 12.6)]),
     ("DRV_AISEN", "F", 0.3, [(58.86, 14.78), (62.47, 14.78), (62.69, 15.0)]),
@@ -198,33 +198,34 @@ PREWIRE = [
     ("MOTL_A", "F", 0.3, [(58.86, 15.42), (60.4, 15.42)]),
     ("MOTL_A", "B", 0.35, [(60.4, 15.42), (60.4, 16.4), (53.6, 16.4), (53.6, 7.2), (55.4, 6.0), (56.0, 5.4)]),
     ("DRV_SLEEP", "F", 0.25, [(58.86, 16.08), (59.725, 16.08), (59.725, 17.6)]),
-    # charger switching loop: L1 to the SW pins, L1 to the PMID pins
-    ("CHG_SW", "F", 0.8, [(20.75, 13.4), (20.75, 15.4), (18.6, 17.6), (17.6, 17.6)]),
-    ("PMID", "F", 0.8, [(18.05, 13.4), (15.4, 15.9)]),
-    # BQ25887 PSEL straight into the exposed pad; MID escapes to the bottom layer
-    ("GND", "F", 0.2, [(14.22, 16.9), (14.22, 17.5)]),
-    ("MID", "F", 0.3, [(15.15, 20.54), (15.15, 21.3), (14.7, 21.75), (14.7, 22.15)]),
-    ("CHG_CBSET", "F", 0.25, [(15.65, 20.54), (15.65, 22.1)]),
+    # IP2320 power loop: LX pin 8 -> C4 -> L1, VIN pin 6 -> L1 -> C1, VSYS pin 1 -> C2, VOUT pin 2 -> C3
+    ("CHG_LX", "F", 0.8, [(19.6, 17.1), (22.6, 17.1)]),
+    ("CHG_BST", "F", 0.3, [(19.6, 18.37), (21.0, 18.78)]),
+    ("VBUS", "F", 0.8, [(19.6, 19.64), (20.6, 19.9), (23.0, 19.9)]),
+    ("VBUS", "F", 0.8, [(22.2, 19.9), (21.65, 21.3), (21.65, 21.8)]),
+    ("CHG_VSYS", "F", 0.6, [(11.95, 17.1), (14.0, 17.1)]),
+    ("BAT+", "F", 0.4, [(11.95, 19.2), (12.9, 18.4), (14.0, 18.37)]),
     # DRV8833 charge pump / VINT caps on the logic side, VM drops to the bottom-layer VSYS
     ("DRV_VCP", "F", 0.3, [(51.7, 12.82), (53.14, 12.83)]),
     ("DRV_VINT", "F", 0.3, [(51.38, 14.78), (53.14, 14.78)]),
     ("VSYS", "F", 0.3, [(51.0, 13.75), (51.7, 13.78), (52.1, 13.47), (53.14, 13.47)]),
     ("VSYS", "B", 0.5, [(51.0, 13.75), (51.0, 8.0), (50.0, 7.0), (50.0, 2.6)]),
+    # C24 (VM decoupling) straight down onto that bottom-layer VSYS run, clear of the BIN lanes
+    ("VSYS", "F", 0.4, [(49.8, 10.5), (50.4, 9.4), (51.0, 9.0)]),
+    # C22 (I2C pull-up decoupling) GND: the bottom layer under it is the VSYS backbone, so via to the side
+    ("GND", "F", 0.3, [(39.2, 3.83), (40.4, 3.83)]),
 ]
 # Thermal / current vias: (net, [(x, y), ...])
 PREVIAS = [
-    ("GND", [(15.4 + dx, 18.6 + dy) for dx in (-0.8, 0, 0.8) for dy in (-0.8, 0, 0.8)]),   # U1 EP
+    ("GND", [(16.5 + dx, 19.0 + dy) for dx in (-0.55, 0.55) for dy in (-1.0, 0, 1.0)]),   # U1 EP
     ("GND", [(56.0 + dx, 13.8 + dy) for dx in (-0.9, 0.9) for dy in (-1.5, -0.5, 0.5, 1.5)]),  # U5 EP
-    ("VSYS", [(27.0, 3.4), (28.6, 3.4), (27.0, 5.4), (28.6, 5.4)]),                        # Q3 tab
+    ("VSYS", [(27.4, 3.75), (28.2, 3.75), (27.4, 5.05), (28.2, 5.05)]),                    # Q3 drain pad
     ("B_NEG", [(13.9, 39.6)]),
-    ("SDA", [(12.55, 18.85)]),
-    ("SCL", [(12.35, 19.95)]),
     ("MOTR_B", [(60.4, 13.47)]),
     ("MOTL_B", [(61.3, 14.12)]),
     ("MOTL_A", [(60.4, 15.42)]),
-    ("MID", [(14.7, 22.15)]),
-    ("CHG_CBSET", [(15.65, 22.1)]),
-    ("VSYS", [(51.0, 13.75)]),
+    ("VSYS", [(51.0, 13.75), (51.0, 9.0)]),
+    ("GND", [(40.4, 3.83)]),
     ("BMS_DRAIN", [(11.2, 36.4), (12.6, 36.4), (19.0, 36.4), (20.4, 36.4), (15.7, 36.4)]),  # Q1/Q2 tabs
 ]
 DEFAULT = (0.25, 0.2, 0.6, 0.3)
@@ -315,7 +316,7 @@ def silkscreen(board, fps):
     # charge input + fuse + switch
     add_text(board, "USB-C", 2.2, 17.0, 0.7, F, bold=True)
     add_text(board, "CHARGE", 2.6, 29.1, 0.7, F, bold=True)
-    near("D1", -2.6, 0, "CHG", 0.7)
+    near("D1", 0, 1.3, "USB", 0.7)
     near("F1", 5.6, 1.7, "FUSE 20A", 0.8, bold=True)
     near("SW1", -1.0, -3.6, "OFF", 0.8)
     near("SW1", 4.6, -3.6, "ON", 0.8, bold=True)
@@ -337,14 +338,14 @@ def silkscreen(board, fps):
     # I2C
     near("J2", 0, -2.2, "I2C", 0.7, bold=True)
     for i, lab in enumerate(("G", "3V3", "SCL", "SDA")):
-        near("J2", -2.4, i * 2.54, lab, 0.7)
+        near("J2", 2.15, i * 2.54, lab, 0.6)      # tight gap to the XIAO outline
     near("D9", 0, 3.5, "STATUS", 0.7)
-    for ref, lab, dx, dy in (("TP4", "5V", 1.8, 0), ("TP5", "3V3", -1.9, 0), ("TP6", "GND", -2.0, 0),
+    for ref, lab, dx, dy in (("TP4", "5V", 1.8, 0), ("TP5", "3V3", 1.9, 0), ("TP6", "GND", 2.0, 0),
                              ("TP7", "MID", 0, 1.7)):
         near(ref, dx, dy, lab, 0.7)
     # title
-    add_text(board, "CARDBOARD BOT v2", 32.0, 36.7, 0.9, F, bold=True)
-    add_text(board, "COLUMBIA GADGET WORKS  rev A", 32.6, 37.9, 0.7, F)
+    add_text(board, "CARDBOARD BOT v2", 31.2, 36.7, 0.9, F, bold=True)
+    add_text(board, "COLUMBIA GADGET WORKS", 31.6, 37.9, 0.7, F)
 
     # bottom: cells, polarity, assembly warnings
     for i, (cy, plus_left) in enumerate(((CELL_Y[0], True), (CELL_Y[1], False))):
@@ -355,7 +356,7 @@ def silkscreen(board, fps):
         add_text(board, f"CELL {'AB'[i]}", 26.0, cy + (5.5 if i == 0 else -5.5), 1.2, B, bold=True)
     add_text(board, "TRIM ALL LEADS FLUSH + KAPTON TAPE BEFORE FITTING CELLS", 40.0, 23.0, 0.75, B, bold=True)
     add_text(board, "2S 18650: flat top, unprotected, 20A+, matched pairs", 50.0, CELL_Y[1] + 5.5, 0.7, B)
-    add_text(board, "github.com/ColumbiaGadgetWorks/cardboard-bot-v2", 50.0, CELL_Y[0] + 5.5, 0.7, B)
+    add_text(board, "github.com/ColumbiaGadgetWorks/cardboard-bot-v2  rev A", 50.0, CELL_Y[0] + 5.5, 0.7, B)
 
 
 def layer_id(side):
@@ -510,7 +511,7 @@ def write_project():
         "board": {"design_settings": {"rules": {"min_clearance": 0.2, "min_track_width": 0.2,
                                                  "min_via_diameter": 0.5, "min_through_hole_diameter": 0.3,
                                                  "min_copper_edge_clearance": 0.4, "min_hole_clearance": 0.25,
-                                                 "min_text_height": 0.7, "min_text_thickness": 0.1}}},
+                                                 "min_text_height": 0.6, "min_text_thickness": 0.09}}},
         "meta": {"filename": "cardboard-bot.kicad_pro", "version": 1},
         "net_settings": {"classes": classes, "meta": {"version": 3}, "netclass_patterns": patterns},
         "schematic": {"legacy_lib_dir": "", "legacy_lib_list": []},

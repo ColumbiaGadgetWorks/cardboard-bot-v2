@@ -106,10 +106,19 @@ def write_custom_lib():
               ("9", "D8/GPIO8", "bidirectional"), ("8", "D7/GPIO20", "bidirectional")]
     hy_l = [("5", "VDD", "power_in"), ("4", "VC", "input"), ("6", "VSS", "power_in")]
     hy_r = [("1", "OD", "output"), ("2", "OC", "output"), ("3", "CS", "input")]
+    ip_l = [("6", "VIN", "power_in"), ("8", "LX", "passive"), ("7", "BST", "passive"), ("4", "NTC", "input")]
+    ip_r = [("1", "VSYS", "power_out"), ("2", "VOUT", "power_out"), ("3", "VSET", "input"), ("5", "LED/ISET", "bidirectional"),
+            ("9", "GND", "power_in")]
+    hb_l = [("2", "VDD", "power_in"), ("3", "VSS", "power_in")]
+    hb_r = [("6", "OUT", "output"), ("1", "NC", "no_connect"), ("4", "NC", "no_connect"), ("5", "NC", "no_connect")]
     syms = [
         box_symbol("XIAO_ESP32C3", "U", xiao_l, xiao_r, width=20.32, desc="Seeed XIAO ESP32-C3 on 2x7 sockets",
                    fp="cgw:XIAO_Socket"),
         box_symbol("HY2120", "U", hy_l, hy_r, width=10.16, desc="HYCON HY2120 2-cell Li-ion protection",
+                   fp="Package_TO_SOT_SMD:SOT-23-6"),
+        box_symbol("IP2320", "U", ip_l, ip_r, width=12.7, desc="INJOINIC IP2320 2S boost charger, ESOP-8",
+                   fp="Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm"),
+        box_symbol("HY2213", "U", hb_l, hb_r, width=10.16, desc="HYCON HY2213 1-cell balance controller",
                    fp="Package_TO_SOT_SMD:SOT-23-6"),
         fet_symbol("NMOS_PDFN", False),
         fet_symbol("PMOS_PDFN", True),
@@ -314,7 +323,7 @@ def main():
     col_w = 150.0
     x_base, y_base = 25.4, 30.48
     block_pos = {}
-    ncols = 4
+    ncols = 5
     for i, b in enumerate(blocks):
         block_pos[b] = (x_base + (i % ncols) * col_w, y_base + (i // ncols) * 270.0)
 
@@ -351,7 +360,8 @@ def main():
         "Generated from hardware/gen/circuit.py (do not hand-edit; edit circuit.py and regenerate).",
         "All connections are made by net labels at pin ends.",
         "XIAO pins: D0 SDA(GPIO2) D1 IO3 D2-D5 DRV8833 AIN1/AIN2/BIN1/BIN2 D6 IO21 D7 OUT2(GPIO20) D8 SCL(GPIO8) D9 LED(GPIO9) D10 OUT1(GPIO10)",
-        "Values to confirm against datasheets before ordering: BQ25887 caps (SNS 44uF, PMID, REGN, BTST), L1, CBSET R3, TS divider, HY2120 RC values.",
+        "Confirm before ordering: IP2320 typical application (VSET/ISET straps, VSYS/VOUT/VIN caps), HY2213 pinout + bleed circuit, HY2120 RC values.",
+        "Battery sense: VSYS/4 on GPIO3 through bridged jumper JP1 (cut JP1 to use IO3 as plain GPIO).",
     ]
     for i, n in enumerate(notes):
         texts.append(f'  (text "{esc(n)}" (at 25.4 {535 + i * 5} 0) (effects (font (size 2 2)) (justify left bottom)) (uuid {uid()}))')
