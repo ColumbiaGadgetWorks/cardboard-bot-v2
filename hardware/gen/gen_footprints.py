@@ -1,4 +1,4 @@
-"""Custom footprints: XIAO socket, MY-18650-01 battery clip, CGW logo."""
+"""Custom footprints: XIAO socket, MY-18650-01 battery clip, WS2812B strip pads, CGW logo."""
 import os
 import uuid
 
@@ -41,6 +41,18 @@ def rect(x1, y1, x2, y2, layer, w=0.12, fill="none"):
 def tht(num, x, y, size, drill, shape="circle"):
     return (f'  (pad "{num}" thru_hole {shape} (at {x} {y}) (size {size} {size}) (drill {drill}) '
             f'(layers "*.Cu" "*.Mask") (tstamp {u()}))\n')
+
+
+def smd(num, x, y, w, h):
+    return (f'  (pad "{num}" smd rect (at {x} {y}) (size {w} {h}) '
+            f'(layers "F.Cu" "F.Paste" "F.Mask") (tstamp {u()}))\n')
+
+
+# One LED cut from a 60 LED/m, 10 mm WS2812B strip: 16.67 mm long, pads +5V / DIN / GND across
+# each cut end (pitch about 3.3 mm). The strip lies flat on the board, LED up.
+STRIP_LEN = 16.67
+STRIP_W = 10.0
+STRIP_PITCH = 3.3
 
 
 def write(name, body, descr, attr="through_hole"):
@@ -91,6 +103,32 @@ def clip():
           "pair 5.0 mm, outboard leg 7.6 mm; pairs 48.0 mm apart for 18650")
 
 
+def strip():
+    """Origin at the strip centre; DIN end at +X, data flows toward -X. Tin the pads, lay the strip
+    on them and heat each strip pad from the top. The DOUT-end pads have no net: they only hold it down."""
+    hx, hw = STRIP_LEN / 2, STRIP_W / 2
+    px = round(hx - 0.5, 3)            # pads run 1.0 mm in under the strip and 0.5 mm past its end
+    b = text("reference", "REF**", 0, -hw - 1.0, "F.Fab", 0.8)
+    b += text("value", "WS2812B_Strip_1LED", 0, hw + 1.0, "F.Fab", 0.8)
+    for i, num in enumerate(("1", "2", "3")):
+        y = round((i - 1) * STRIP_PITCH, 3)
+        b += smd(num, px, y, 2.0, 1.8)
+        b += smd("", -px, y, 2.0, 1.8)
+    b += rect(-hx, -hw, hx, hw, "F.Fab", 0.1)
+    b += rect(-hx - 1.0, -hw - 0.25, hx + 1.0, hw + 0.25, "F.CrtYd", 0.05)
+    # silk: top edge of the strip, pad names and data arrow (under the strip, for assembly)
+    b += line(-hx + 1.4, -hw, hx - 1.4, -hw, "F.SilkS", 0.15)
+    for lab, y in (("+5V", -STRIP_PITCH), ("DIN", 0), ("GND", STRIP_PITCH)):
+        b += text("user", lab, round(hx - 3.6, 2), y, "F.SilkS", 0.7)
+    b += line(2.0, 0, -3.0, 0, "F.SilkS", 0.15)
+    b += line(-3.0, 0, -2.0, -0.7, "F.SilkS", 0.15)
+    b += line(-3.0, 0, -2.0, 0.7, "F.SilkS", 0.15)
+    b += text("user", "WS2812B STRIP", 0, -1.6, "F.SilkS", 0.7)
+    b += text("user", "60/m 10mm", 0, 1.6, "F.SilkS", 0.6)
+    write("WS2812B_Strip_1LED", b, "One LED cut from a 60 LED/m 10 mm WS2812B strip, soldered flat: "
+          "+5V/DIN/GND at +X, unconnected hold-down pads at the DOUT end", attr="smd")
+
+
 def logo(size_mm=11.0, name="CGW_Logo", layer="F.SilkS"):
     im = Image.open(os.path.join(HW, "docs", "cgw_logo.png")).convert("RGBA")
     W, H = im.size
@@ -135,6 +173,7 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     xiao()
     clip()
+    strip()
     print("logo rects:", logo(11.0, "CGW_Logo", "F.SilkS"))
     logo(7.0, "CGW_Logo_7mm", "F.SilkS")
     logo(6.0, "CGW_Logo_6mm", "F.SilkS")

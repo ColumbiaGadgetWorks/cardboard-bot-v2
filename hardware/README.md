@@ -17,19 +17,20 @@ Parts were picked for JLC stock: Basic or no-fee Preferred parts wherever JLC ha
 well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
 
 - **Charging:** USB-C (5 V) feeds an IP2320 2S boost charger (8.40 V CC/CV, 1.0 A), wired as in
-  the datasheet's typical application. A 10k NTC sits in the gap between the cells and stops
-  charging below about 0 °C or above about 45 °C. The red charge LED is on while charging, off
-  when full, and blinks on a fault. It works with the robot switched off.
-- **Balancing:** one HY2213-BB3A per cell. When a cell passes 4.20 V it switches on a P-FET and a
-  100 Ω bleed resistor (about 42 mA) until the other cell catches up.
+  the datasheet's typical application. The NTC pin has a fixed 10k (R33), so temperature sensing
+  is off; a 0603 10k B3380 NTC fits the same pads if it's wanted later. The red charge LED is on
+  while charging, off when full, and blinks on a fault. It works with the robot switched off.
+- **No cell balancing.** The HY2120 BMS still stops charging if either cell passes 4.28 V. Use
+  matched cells (same brand, same batch) and keep them together as a pair.
 - **Cells:** 2 × 18650 in four MY-18650-01 clips on the back. Each clip has three legs, and the
   two clips of a cell sit 48 mm apart (leg pair to leg pair), per the MYOUNG drawing. A HY2120 BMS plus two
   HYG015N03LS1C2 FETs give over-current, over-charge and over-discharge protection.
   A 20 A mini blade fuse follows.
-- **Power switch:** a slide switch drives the gate of a P-FET (CJAB35P03), so the switch never
-  carries motor current. Charging still works when the switch is off.
+- **Power switch:** an off-board panel switch (rocker or toggle, SPST, rated 10 A or more at 12 V DC)
+  on 18 AWG wire, soldered to the SW1 wire pads next to the fuse. It carries the full battery
+  current. Charging still works when the switch is off.
 - **VSYS (≈6–8.4 V)** feeds the following:
-  - SMAJ10A surge diode
+  - SMF10CA surge diode (10 V stand-off)
   - a 470 µF through-hole bulk capacitor by the ESC terminals
   - both ESC screw terminals (J9, J10)
   - the DRV8833
@@ -47,9 +48,9 @@ well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
 - **Battery sense:** VSYS ÷ 4 goes to GPIO3 (ADC) through JP1, a bridged solder jumper under the
   XIAO. To use IO3 as a normal GPIO on J7, cut JP1.
 - **I2C header** J2 (GND, 3V3, SCL, SDA) for add-ons.
-- **Status LED:** a WS2812B-type 5050 LED, soldered by CGW (JLC won't place the XL-5050 part). It runs from 5 V through a 1N4148W
-  diode (about 4.2 V), so the ESP32's 3.3 V data line is above the LED's 0.7 × VDD input
-  threshold without a level shifter.
+- **Status LED:** one LED cut from a WS2812B strip (5 V, 60 LED/m, 10 mm wide), laid flat on the J11
+  pads at the bottom edge. It runs from 5 V through a 1N4148W diode (about 4.2 V), so the ESP32's
+  3.3 V data line is above the LED's 0.7 × VDD input threshold without a level shifter.
 - **Bulk capacitors** C13, C19 and C27 are through-hole radial parts, soldered by CGW.
   JLC has no Basic SMD electrolytics, and the old SMD ones were out of stock.
 
@@ -84,8 +85,7 @@ GPIO2, GPIO8 and GPIO9 are strapping pins. They only carry signals that idle hig
 
 ## Before ordering – check these
 
-The IP2320, HY2213, XL-5050 LED, SMAJ10A and clip were checked against their datasheets
-(LCSC C19191089, C113632, C22461793, C41376407, C2979183).
+The IP2320 and the battery clip were checked against their datasheets (LCSC C19191089, C2979183).
 
 1. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
    jlcpcb.com/parts. Stock and Basic/Preferred status change daily.
@@ -98,7 +98,13 @@ The IP2320, HY2213, XL-5050 LED, SMAJ10A and clip were checked against their dat
    - R4, which is 1 Ω where the IP2320 datasheet shows 0.5 Ω (the nearest Basic value)
 4. **Fit check:** put a real cell in two clips on a printed 1:1 copy of the board before soldering.
 5. **Assembly:** trim the clip, header and capacitor leads flush on the back. Put a layer of
-   Kapton tape under the cells. Fit the fuse last. The two ESC screw terminals overhang the
+   Kapton tape under the cells. Fit the fuse last.
+   - **LED strip:** cut one LED from the strip on the cut lines. Tin the three J11 pads, lay the
+     piece on them with its DIN end (arrow pointing away) on the +5V / DIN / GND pads, and heat each
+     strip pad from the top. The pads at the other end only hold it down. Strips differ: check the
+     strip's +5V / DIN / GND order matches the silkscreen before soldering. If it doesn't, wire it
+     with three short wires instead.
+   - **Power switch:** mount it in the cardboard and run two 18 AWG wires to the SW1 pads. The two ESC screw terminals overhang the
    bottom edge, so their wire entries face outward.
 
 ## Regenerating

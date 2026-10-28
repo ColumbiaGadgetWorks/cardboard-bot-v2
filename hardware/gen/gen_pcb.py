@@ -34,9 +34,7 @@ PLACE = {
     "BT1": (CLIP_X[0], CELL_Y[1], 0, "B"),     # cell B -  -> B_NEG
     # --- fuse + power switch FET (top left) -------------------------------
     "F1": (10.4, 2.3, 0, "F"),
-    "Q3": (27.2, 4.4, 0, "F"),         # PowerPAK 1212-8: source pads left, drain pad right
-    "R11": (25.2, 7.4, 0, "F"),
-    "R12": (28.6, 8.6, 0, "F"),
+    "SW1": (25.0, 2.6, 0, "F"),        # wire pads for the panel switch: VFUSE pad here (clear of the fuse holder body), VSYS pad 4.8 mm right
     # --- USB-C + IP2320 charger (datasheet fig. 5 layout) ---------------------
     "J1": (3.65, 23.0, 270, "F"),
     "R1": (10.4, 23.6, 0, "F"),
@@ -51,21 +49,11 @@ PLACE = {
     "C1": (23.5, 22.9, 0, "F"),        # inductor input cap
     "R3": (23.4, 24.7, 0, "F"),        # input load 5.1k
     "C5": (19.0, 24.45, 0, "F"),       # VIN pin cap
-    "TH1": (14.0, 23.4, 0, "F"),       # in the gap between the two cells
+    "R33": (14.0, 23.4, 0, "F"),       # NTC stand-in; an NTC fits here, in the gap between the two cells
     "C7": (16.25, 24.1, 90, "F"),       # NTC cap
     "R7": (24.6, 42.8, 0, "F"),
     "D1": (24.6, 41.2, 180, "F"),      # charge LED, next to the power switch
     # --- cell balancing ------------------------------------------------------------
-    "R29": (19.0, 9.0, 0, "F"),
-    "C32": (22.4, 9.0, 0, "F"),
-    "U7": (19.9, 11.9, 0, "F"),
-    "Q4": (24.0, 11.9, 0, "F"),
-    "R30": (21.8, 15.0, 0, "F"),
-    "R31": (12.85, 26.6, 0, "F"),
-    "C33": (12.85, 28.2, 0, "F"),
-    "U8": (16.4, 27.4, 0, "F"),
-    "Q5": (20.4, 27.4, 0, "F"),
-    "R32": (24.6, 27.4, 0, "F"),
     # --- BMS: controller right of the B- clip, FETs below it ------------------------
     "U2": (21.4, 34.6, 0, "F"),
     "R8": (25.4, 31.6, 0, "F"),
@@ -77,7 +65,6 @@ PLACE = {
     "Q2": (18.8, 41.6, 180, "F"),
     "TP7": (76.0, 22.0, 0, "F"),
     # --- switch / VSYS -------------------------------------------------------
-    "SW1": (31.6, 42.6, 0, "F"),
     "D2": (69.6, 4.3, 90, "F"),
     # --- hold-up + buck ------------------------------------------------------
     "D3": (28.8, 24.3, 0, "F"),
@@ -91,8 +78,7 @@ PLACE = {
     "R14": (38.0, 31.8, 0, "F"),
     "C17": (46.7, 26.6, 90, "F"),
     "C18": (48.7, 26.6, 90, "F"),
-    "C19": (43.35, 33.6, 0, "F"),      # radial 6.3 mm, body centre (44.6, 33.6)
-    "TP4": (36.4, 35.8, 0, "F"),
+    "C19": (43.35, 32.9, 0, "F"),      # radial 6.3 mm, body centre (44.6, 32.9), clear of the LED strip
     "D4": (44.6, 5.6, 90, "F"),        # under the XIAO, next to its 5V pin
     "C20": (44.6, 9.8, 90, "F"),
     "C21": (42.6, 9.4, 90, "F"),
@@ -113,9 +99,9 @@ PLACE = {
     "R25": (35.6, 20.0, 0, "F"),
     # --- RGB LED ---------------------------------------------------------------
     "R26": (43.6, 16.8, 90, "F"),
-    "D9": (45.2, 41.4, 0, "F"),
-    "C30": (40.6, 41.4, 90, "F"),
-    "D10": (38.8, 36.6, 90, "F"),
+    "J11": (37.0, 41.3, 0, "F"),       # WS2812B strip piece, DIN end at the right
+    "C30": (48.0, 38.6, 90, "F"),
+    "D10": (38.4, 35.2, 0, "F"),
     # --- drive -------------------------------------------------------------------
     "J3": (56.0, 5.4, 180, "F"),
     "J4": (64.4, 4.6, 180, "F"),       # pulled up to clear the MID clip legs
@@ -156,14 +142,14 @@ NETCLASSES = {
     "Pwr05": (0.5, 0.2, 0.8, 0.4, ["VSYS", "VFUSE", "B_NEG", "BMS_DRAIN", "+5V", "+5V_XIAO", "VHOLD",
                                    "BUCK_SW", "OUT1_VP", "OUT2_VP", "IO3_VP", "IO21_VP",
                                    "VBUS", "CHG_LX", "CHG_VSYS"]),
-    "Pwr03": (0.3, 0.2, 0.6, 0.3, ["BAT+", "MID", "GND", "BAL1_D", "BAL2_D"]),
+    "Pwr03": (0.3, 0.2, 0.6, 0.3, ["BAT+", "MID", "GND"]),
     "Motor": (0.4, 0.2, 0.8, 0.4, ["MOTL_A", "MOTL_B", "MOTR_A", "MOTR_B", "DRV_AISEN", "DRV_BISEN"]),
 }
 # Copper reserved for the high-current nets: (net, layer, x0, y0, x1, y1).
 # prewire() puts router keepouts here; route.py replaces them with solid zones.
 POWER_AREAS = [
     ("BAT+", "B", 1.0, 0.8, 17.9, 16.9),        # under the cell A + clip and the fuse
-    ("VFUSE", "F", 18.9, 0.7, 25.2, 5.5),
+    ("VFUSE", "F", 18.9, 0.7, 26.6, 5.5),
     ("B_NEG", "B", 1.0, 29.0, 17.9, 38.4),      # under the cell B - clip
     ("B_NEG", "F", 5.4, 38.6, 9.0, 42.9),       # Q1 source pads
     ("BMS_DRAIN", "F", 9.6, 38.9, 20.2, 44.3),
@@ -176,7 +162,7 @@ PREWIRE = [
     ("BAT+", "B", 3.0, [(8.4, 12.5), (10.4, 8.6), (10.4, 2.3)]),
     ("BAT+", "B", 3.0, [(16.0, 15.0), (16.0, 10.0), (12.6, 6.4), (10.4, 5.7)]),
     ("VFUSE", "F", 2.5, [(20.32, 2.3), (20.32, 5.7)]),
-    ("VFUSE", "F", 2.0, [(20.32, 3.9), (25.4, 3.9)]),       # onto the three source pads of Q3
+    ("VFUSE", "F", 2.0, [(20.32, 3.9), (25.0, 2.6)]),       # onto the switch wire pad
     # cell B - clip (three legs) down to the discharge FET sources
     ("B_NEG", "B", 3.0, [(8.4, 33.5), (16.0, 31.0), (16.0, 36.0), (8.4, 33.5)]),
     ("B_NEG", "B", 3.0, [(8.4, 33.5), (7.4, 37.0), (7.4, 41.6)]),
@@ -184,18 +170,12 @@ PREWIRE = [
     ("BMS_DRAIN", "F", 3.0, [(11.0, 41.6), (18.8, 41.6)]),
     # MID: cell A - clip to cell B + clip through the two outboard legs
     ("MID", "B", 3.0, [(71.6, 12.5), (74.6, 12.5), (74.6, 33.5), (71.6, 33.5)]),
-    # VSYS backbone: Q3 tab -> along the top edge -> down the right side -> both ESC terminals
-    ("VSYS", "B", 2.5, [(28.6, 3.4), (30.2, 1.8), (66.8, 1.8), (67.4, 2.4)]),
+    # VSYS backbone: switch wire pad -> along the top edge -> down the right side -> both ESC terminals
+    ("VSYS", "B", 2.5, [(29.8, 2.6), (30.6, 1.8), (66.8, 1.8), (67.4, 2.4)]),
     # jog right past the sense resistors so their GND ends can drop vias to the bottom pour
     ("VSYS", "B", 2.0, [(67.4, 2.4), (68.8, 3.8), (68.8, 19.6), (67.4, 21.0)]),
     ("VSYS", "B", 2.5, [(67.4, 21.0), (67.4, 39.6), (66.6, 40.4), (54.4, 40.4), (52.8, 43.5)]),
     ("VSYS", "B", 2.5, [(64.0, 40.4), (64.0, 43.5)]),
-    ("VSYS", "B", 1.0, [(27.4, 5.05), (27.4, 3.75), (28.2, 3.75), (28.6, 3.4)]),
-    ("VSYS", "B", 1.0, [(28.2, 5.05), (28.2, 3.75)]),
-    # gate pull-up R11 to VFUSE (the VFUSE pour area is closed to the router)
-    ("VFUSE", "F", 0.5, [(20.32, 5.7), (21.6, 6.8), (23.6, 7.4), (24.38, 7.4)]),
-    # bottom-cell balancer C33 into the B_NEG pour
-    ("B_NEG", "F", 0.5, [(13.63, 28.2), (13.63, 29.7)]),
     # DRV8833 (rotated 180): sense pins out between the MID clip legs to R18/R19, motor outputs via planned vias
     ("DRV_BISEN", "F", 0.3, [(58.86, 12.83), (61.9, 12.83), (62.5, 12.25), (66.4, 12.25), (67.0, 12.06)]),
     ("DRV_AISEN", "F", 0.3, [(58.86, 14.78), (62.0, 14.78), (62.7, 13.0), (66.4, 13.0), (67.0, 13.94)]),
@@ -236,8 +216,7 @@ PREWIRE = [
 PREVIAS = [
     ("GND", [(16.5 + dx, 19.9 + dy) for dx in (-0.55, 0.55) for dy in (-1.0, 0, 1.0)]),   # U1 EP
     ("GND", [(56.0 + dx, 13.8 + dy) for dx in (-0.9, 0.9) for dy in (-1.5, -0.5, 0.5, 1.5)]),  # U5 EP
-    ("VSYS", [(27.4, 3.75), (28.2, 3.75), (27.4, 5.05), (28.2, 5.05)]),                    # Q3 drain pad
-    ("B_NEG", [(13.63, 29.7), (6.4, 39.6), (6.4, 40.8), (6.4, 42.0), (7.4, 39.6), (7.4, 42.2)]),
+    ("B_NEG", [(6.4, 39.6), (6.4, 40.8), (6.4, 42.0), (7.4, 39.6), (7.4, 42.2)]),
     ("MOTR_B", [(60.4, 13.47)]),
     ("MOTL_B", [(61.3, 14.12)]),
     ("MOTL_A", [(60.4, 15.42)]),
@@ -337,8 +316,8 @@ def silkscreen(board, fps):
     add_text(board, "CHARGE", 2.6, 29.1, 0.7, F, bold=True)
     near("D1", -1.9, 0, "CHG", 0.7)
     near("F1", 5.6, 1.7, "FUSE 20A", 0.8, bold=True)
-    near("SW1", -1.0, -3.6, "OFF", 0.8)
-    near("SW1", 4.6, -3.6, "ON", 0.8, bold=True)
+    near("SW1", 2.4, 2.2, "SWITCH", 0.7, bold=True)
+    near("SW1", 2.4, 3.2, "10A+ DC", 0.6)
     # motors
     for ref, lab in (("J3", "MOTOR L"), ("J4", "MOTOR R")):
         near(ref, -1.75, 5.1, lab, 0.75, bold=True)
@@ -358,13 +337,12 @@ def silkscreen(board, fps):
     near("J2", 0, -2.2, "I2C", 0.7, bold=True)
     for i, lab in enumerate(("G", "3V3", "SCL", "SDA")):
         near("J2", 2.15, i * 2.54, lab, 0.6)      # tight gap to the XIAO outline
-    near("D9", 0, 3.5, "STATUS", 0.7)
-    for ref, lab, dx, dy in (("TP4", "5V", 1.8, 0), ("TP5", "3V3", 1.9, 0), ("TP6", "GND", 2.0, 0),
+    for ref, lab, dx, dy in (("TP5", "3V3", 1.9, 0), ("TP6", "GND", 2.0, 0),
                              ("TP7", "MID", 0, 1.7)):
         near(ref, dx, dy, lab, 0.7)
     # title
-    add_text(board, "CARDBOARD BOT v2", 31.2, 36.7, 0.9, F, bold=True)
-    add_text(board, "COLUMBIA GADGET WORKS", 31.6, 37.9, 0.7, F)
+    add_text(board, "CARDBOARD BOT v2", 18.6, 27.0, 0.9, F, bold=True)
+    add_text(board, "COLUMBIA GADGET WORKS", 18.6, 28.3, 0.7, F)
 
     # bottom: cells, polarity, assembly warnings
     for i, (cy, plus_left) in enumerate(((CELL_Y[0], True), (CELL_Y[1], False))):
@@ -471,7 +449,7 @@ def main():
         for pad in fp.Pads():
             num = pad.GetNumber()
             if num == "":
-                if ref in ("Q1", "Q2", "Q3") and pad.IsOnCopperLayer():
+                if ref in ("Q1", "Q2") and pad.IsOnCopperLayer():
                     n = pins.get("5")
                     pad.SetNet(net(n))
                 continue

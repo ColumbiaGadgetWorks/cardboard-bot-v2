@@ -80,7 +80,7 @@ add(dict(ref="J1", sym="Connector:USB_C_Receptacle_USB2.0_16P", value="USB-C CHA
                "A6": None, "A7": None, "B6": None, "B7": None, "A8": None, "B8": None}))
 add(R("R1", "5.1k", "CC1", GND, lcsc="C23186", mpn="0603WAF5101T5E", verified=True, block="charge"))
 add(R("R2", "5.1k", "CC2", GND, lcsc="C23186", mpn="0603WAF5101T5E", verified=True, block="charge"))
-add(C("C1", "22uF", "VBUS", GND, fp=F0805C, block="charge", **C22U))
+add(C("C1", "10uF", "VBUS", GND, fp=F0805C, block="charge", **C10U))      # datasheet C5: 10 uF
 
 # ---------------------------------------------------------------------------
 # 2. IP2320 2S boost charger (5 V USB in, 8.4 V CC/CV out)
@@ -103,9 +103,9 @@ add(C("C2", "22uF", "CHG_VSYS", GND, fp=F0805C, block="charge", **C22U))      # 
 add(C("C3", "10uF", BAT, GND, fp=F0805C, block="charge", **C10U))
 add(C("C4", "100nF", "CHG_BST", "CHG_LX", block="charge", **C100N))
 add(C("C6", "100nF", "CHG_VSET", GND, block="charge", **C100N))
-add(dict(ref="TH1", sym="Device:Thermistor_NTC", value="10k B3380", fp="Resistor_SMD:R_0603_1608Metric",
-         lcsc="C13564", mpn="NCP18XH103F03RB", verified=True, place="jlc", block="charge",
-         pins={"1": "CHG_NTC", "2": GND}))
+# NTC pin: a fixed 10k reads as 25 C (50 uA x 10k = 0.5 V, inside the 0.245-1.375 V window), so
+# temperature sensing is off. A 0603 10k B3380 NTC (C13564) fits the same pads if it's wanted later.
+add(R("R33", "10k", "CHG_NTC", GND, block="charge", **R10K))
 add(C("C7", "100nF", "CHG_NTC", GND, block="charge", **C100N))
 # Charge LED on the IP2320 LED pin: on while charging, off when full, blinks on a fault
 add(R("R7", "1k", "CHG_LED", "CHG_LED_A", block="charge", **R1K))
@@ -135,20 +135,6 @@ add(dict(ref="Q1", sym="cgw:NMOS_PDFN", value="HYG015N03LS1C2 DSG", fp="Package_
 add(dict(ref="Q2", sym="cgw:NMOS_PDFN", value="HYG015N03LS1C2 CHG", fp="Package_DFN_QFN:PQFN-8-EP_6x5mm_P1.27mm_Generic",
          lcsc="C18222234", mpn="HYG015N03LS1C2", verified=True, place="jlc", block="bms",
          pins={"1": GND, "2": GND, "3": GND, "4": "BMS_CO", "5": "BMS_DRAIN"}))
-# Cell balancing (HY2213 datasheet, P-MOSFET example): HY2213-BB3A per cell switches a P-FET + 100R bleed
-# (~42 mA) above 4.20 V. R 100R + C 100nF filter on VDD per the datasheet table.
-for (u, r_in, c_in, q, r_b, top, bot, tag) in (("U7", "R29", "C32", "Q4", "R30", BAT, MID, "BAL1"),
-                                               ("U8", "R31", "C33", "Q5", "R32", MID, B_NEG, "BAL2")):
-    add(dict(ref=u, sym="cgw:HY2213", value="HY2213-BB3A", fp="Package_TO_SOT_SMD:SOT-23-6",
-             lcsc="C113632", mpn="HY2213-BB3A", verified=True, place="jlc", block="bal",
-             pins={"1": None, "2": f"{tag}_VDD", "3": bot, "4": None, "5": None, "6": f"{tag}_G"}))
-    add(R(r_in, "100R", top, f"{tag}_VDD", lcsc="C22775", mpn="0603WAF1000T5E", verified=True, block="bal"))
-    add(C(c_in, "100nF", f"{tag}_VDD", bot, block="bal", **C100N))
-    add(dict(ref=q, sym="Device:Q_PMOS_GSD", value="AO3401A", fp="Package_TO_SOT_SMD:SOT-23",
-             lcsc="C15127", mpn="AO3401A", verified=True, place="jlc", block="bal",
-             pins={"1": f"{tag}_G", "2": top, "3": f"{tag}_D"}))
-    add(R(r_b, "100R", f"{tag}_D", bot, fp="Resistor_SMD:R_1206_3216Metric", lcsc="C17901",
-          mpn="1206W4F1000T5E", verified=True, block="bal"))
 add(dict(ref="F1", sym="Device:Fuse", value="20A mini blade", fp="Fuse:Fuseholder_Blade_Mini_Keystone_3568",
          lcsc="", mpn="Mini blade holder (Keystone 3568 footprint)", place="hand", block="bms",
          pins={"1": BAT, "2": VFUSE}))
@@ -156,16 +142,14 @@ add(dict(ref="F1", sym="Device:Fuse", value="20A mini blade", fp="Fuse:Fuseholde
 # ---------------------------------------------------------------------------
 # 4. Power switch, VSYS, surge protection, bulk caps
 # ---------------------------------------------------------------------------
-add(dict(ref="Q3", sym="cgw:PMOS_PDFN", value="CJAB35P03", fp="Package_SO:Vishay_PowerPAK_1212-8_Single",
-         lcsc="C504071", mpn="CJAB35P03", verified=True, place="jlc", block="switch",
-         pins={"1": VFUSE, "2": VFUSE, "3": VFUSE, "4": "PSW_G", "5": VSYS}))
-add(R("R11", "100k", VFUSE, "PSW_G", lcsc="C25803", mpn="0603WAF1003T5E", verified=True, block="switch"))
-add(R("R12", "10k", "PSW_G", "PSW_SW", block="switch", **R10K))
-add(dict(ref="SW1", sym="Switch:SW_SPDT", value="POWER", fp="Button_Switch_THT:SW_Slide_SPDT_Straight_CK_OS102011MS2Q",
-         lcsc="", mpn="SS-12D00 slide switch", place="hand", block="switch",
-         pins={"1": None, "2": "PSW_SW", "3": GND}))
-add(dict(ref="D2", sym="Device:D_Zener", value="SMAJ10A", fp="Diode_SMD:D_SMA",
-         lcsc="C41376407", mpn="SMAJ10A", verified=True, place="jlc", block="switch",
+# The power switch carries the full battery current, so it's an off-board panel switch on two
+# 0.75 mm2 (18 AWG) wire pads (fuse output -> VSYS). Charging is on the cell side and works with it off.
+add(dict(ref="SW1", sym="Switch:SW_SPST", value="POWER SW", fp="Connector_Wire:SolderWire-0.75sqmm_1x02_P4.8mm_D1.25mm_OD2.3mm",
+         lcsc="", mpn="SPST rocker or toggle, 10 A+ at 12 V DC, panel mount, 18 AWG silicone wire",
+         place="hand", block="switch", pins={"1": VFUSE, "2": VSYS}))
+# 10 V stand-off, 12.3 V breakdown: same clamp as the SMAJ10A, 200 W, no feeder fee (Preferred)
+add(dict(ref="D2", sym="Device:D_TVS", value="SMF10CA", fp="Diode_SMD:D_SOD-123F",
+         lcsc="C19077505", mpn="SMF10CA", verified=True, place="jlc", block="switch",
          pins={"1": VSYS, "2": GND}))
 
 # ---------------------------------------------------------------------------
@@ -189,9 +173,8 @@ add(C("C17", "22uF", V5, GND, fp=F0805C, block="buck", **C22U))
 add(C("C18", "22uF", V5, GND, fp=F0805C, block="buck", **C22U))
 add(CP("C19", "220uF 16V", V5, GND, fp=CP63, mpn=CP220_NOTE, place="hand", block="buck"))
 add(DS("D4", "B5819W", V5_XIAO, V5, fp="Diode_SMD:D_SOD-123", lcsc="C8598", mpn="B5819W SL", verified=True, block="buck"))
-add(C("C20", "22uF", V5_XIAO, GND, fp=F0805C, block="buck", **C22U))
+add(C("C20", "10uF", V5_XIAO, GND, fp=F0805C, block="buck", **C10U))
 add(C("C21", "100nF", V5_XIAO, GND, block="buck", **C100N))
-add(TP("TP4", V5, block="buck"))
 
 # ---------------------------------------------------------------------------
 # 6. XIAO ESP32-C3 (socketed)
@@ -279,30 +262,30 @@ add(CP("C27", "470uF 16V", VSYS, GND, fp=CP8, mpn=CP470_NOTE, place="hand", bloc
 # ---------------------------------------------------------------------------
 # 9. RGB status LED
 # ---------------------------------------------------------------------------
-# WS2812-type LED run from 5 V minus a diode (~4.2 V), so the ESP32's 3.3 V data meets VIH = 0.7 x VDD
+# WS2812B strip LED run from 5 V minus a diode (~4.2 V), so the ESP32's 3.3 V data meets VIH = 0.7 x VDD
 add(dict(ref="D10", sym="Device:D", value="1N4148W", fp="Diode_SMD:D_SOD-123",
          lcsc="C81598", mpn="1N4148W", verified=True, place="jlc", block="led",
          pins={"1": "LED_VDD", "2": V5}))
 add(R("R26", "330R", "LED_DIN3", "LED_DIN", block="led", **R330))
-add(dict(ref="D9", sym="LED:WS2812B", value="XL-5050RGBC-2812B-S", fp="LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm",
-         lcsc="C22461793", mpn="WS2812B 5050 (any brand), soldered by CGW: JLC won't place it", verified=True, place="hand", block="led",
-         pins={"1": "LED_VDD", "2": None, "3": GND, "4": "LED_DIN"}))
+# One LED cut from a WS2812B strip, laid flat on the board and soldered to three pads at its DIN end
+add(dict(ref="J11", sym="Connector_Generic:Conn_01x03", value="LED STRIP", fp="cgw:WS2812B_Strip_1LED",
+         lcsc="", mpn="1 LED cut from a WS2812B strip: 5 V, 60 LED/m, 10 mm wide, pads +5V/DIN/GND",
+         place="hand", block="led", pins={"1": "LED_VDD", "2": "LED_DIN", "3": GND}))
 add(C("C30", "100nF", "LED_VDD", GND, block="led", **C100N))
 
 # Power flags for ERC (nets driven only by passive parts)
 POWER_FLAGS = [GND, "VBUS", BAT, B_NEG, MID, VSYS, VHOLD, V5, V5_XIAO, V3, VFUSE, "CHG_VSYS", "CHG_VIN", "LED_VDD",
-               "DRV_VINT", "DRV_VCP", "BAL1_VDD", "BAL2_VDD"]
+               "DRV_VINT", "DRV_VCP"]
 
 BLOCK_TITLES = {
     "charge": "1  USB-C charge input + IP2320 2S boost charger",
     "bms": "2  Cells, 2S BMS (HY2120), 20 A blade fuse",
-    "bal": "2b Cell balancing (2x HY2213)",
-    "switch": "3  Power switch (P-FET), surge clamp, bulk",
+    "switch": "3  Power switch (off-board), surge clamp, bulk",
     "buck": "4  Hold-up + 5 V buck (TPS54202), XIAO feed",
     "mcu": "5  XIAO ESP32-C3, I2C, battery sense",
     "drive": "6  DRV8833 drive, 2 A current limit",
     "outputs": "7  PWM outputs (ESC or servo) + spare GPIO",
-    "led": "8  RGB status LED",
+    "led": "8  RGB status LED (WS2812B strip piece)",
 }
 
 
