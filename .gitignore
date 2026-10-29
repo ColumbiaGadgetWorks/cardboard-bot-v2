@@ -6,3 +6,8 @@ hardware/*.kicad_prl
 hardware/*-backups/
 hardware/fp-info-cache
 hardware/_autosave-*
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/managed_components/
+firmware/dependencies.lock

@@ -1,0 +1,77 @@
+name: firmware
+
+# Every branch and tag is built and published to GitHub Pages under fw/<branch or tag>/.
+# main also publishes the flasher site and fw/beta; a v* tag publishes fw/stable.
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+    paths-ignore: ['hardware/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.3.2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Host tests (control logic, settings image)
+        run: |
+          cc -O1 -Wall -Wextra -I firmware/main firmware/test/test_control.c firmware/main/control.c \
+             firmware/main/config.c -lm -o /tmp/test_control
+          /tmp/test_control
+
+      - name: Build
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          export FW_VERSION=$(git describe --tags --always --dirty)
+          owner=$(echo "${GITHUB_REPOSITORY%%/*}" | tr A-Z a-z); repo=${GITHUB_REPOSITORY#*/}
+          if [ "$(echo "$repo" | tr A-Z a-z)" = "$owner.github.io" ]; then
+            export FW_PAGES_BASE="https://$owner.github.io"
+          else
+            export FW_PAGES_BASE="https://$owner.github.io/$repo"
+          fi
+          echo "version $FW_VERSION, updates from $FW_PAGES_BASE"
+          . $IDF_PATH/export.sh > /dev/null
+          cd firmware
+          set -o pipefail
+          idf.py build 2>&1 | tee build.log
+          python3 ../ci/manifest.py build ../out "$FW_VERSION" "$GITHUB_REF_NAME" "$GITHUB_SHA"
+          idf.py size | tail -20
+
+      - name: Report compile errors
+        if: failure()
+        shell: bash
+        run: |
+          # surface the first errors as annotations (readable without the full log)
+          grep -E "error:|Error |undefined reference|CMake Error" firmware/build.log | head -10 | while IFS= read -r l; do
+            echo "::error::${l//$GITHUB_WORKSPACE\//}"
+          done || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: out/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: /tmp/fw
+      - name: Publish to gh-pages
+        run: ci/publish.sh /tmp/fw "$GITHUB_REF_NAME" "$GITHUB_REF_TYPE"

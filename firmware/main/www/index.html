@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2b2118">
+<title>Cardboard Bot</title>
+<style>
+:root{--bg:#f4ede1;--card:#fffaf2;--ink:#2b2118;--muted:#7a6a58;--line:#e2d6c3;--kraft:#b98a52;--red:#c8402e;--green:#2f8a4c;--amber:#d98c1a;--blue:#2f6fb0;--purple:#7b4bb0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{display:flex;flex-direction:column;overscroll-behavior:none}
+header{display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--ink);color:#f4ede1;flex-wrap:wrap}
+header b{font-size:16px}
+.pill{padding:2px 8px;border-radius:99px;background:#ffffff22;font-size:13px;white-space:nowrap}
+.pill.warn{background:var(--amber);color:#2b2118}.pill.bad{background:var(--red);color:#fff}.pill.ok{background:var(--green)}
+nav{display:flex;margin-left:auto;gap:2px}
+nav button{background:none;border:0;color:#f4ede1aa;font:inherit;padding:6px 10px;border-radius:6px}
+nav button.on{color:#fff;background:#ffffff22}
+main{flex:1;overflow:auto;position:relative}
+section{display:none;padding:12px}section.on{display:block}
+#drive{padding:0;height:100%;position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+#drive.on{display:flex}
+.stick{flex:1;position:relative;touch-action:none}
+.base{position:absolute;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:2px solid var(--line);background:#ffffff60;left:50%;top:55%}
+.knob{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:var(--kraft);left:50%;top:50%;box-shadow:0 2px 6px #0003}
+.stick .lbl{position:absolute;bottom:8px;width:100%;text-align:center;color:var(--muted);font-size:12px}
+.mid{width:min(40%,280px);display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:8px;padding:8px}
+.big{font:700 18px system-ui;border:0;border-radius:12px;padding:16px 8px;color:#fff;background:var(--green)}
+.big.armed{background:var(--red)}
+.fires{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fire{font:700 15px system-ui;border:2px solid var(--red);border-radius:12px;padding:14px 4px;background:var(--card);color:var(--red)}
+.fire.down{background:var(--red);color:#fff}
+.small{font-size:12px;color:var(--muted)}
+.msg{min-height:20px;text-align:center;font-weight:600}
+.msg.bad{color:var(--red)}
+.row{display:flex;gap:8px;align-items:center}
+.tog{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;font:inherit}
+.tog.on{background:var(--ink);color:#fff}
+#viewer{position:absolute;inset:0;background:#f4ede1ee;display:none;align-items:center;justify-content:center;z-index:5}
+#viewer.on{display:flex}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px;max-width:640px}
+.card h3{margin:0 0 8px;font-size:16px}
+label{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
+label:last-child{border-bottom:0}
+input,select{font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;max-width:55%}
+input[type=checkbox]{width:22px;height:22px}
+input[type=number]{width:90px}
+.btn{font:600 15px system-ui;border:0;border-radius:8px;padding:10px 14px;background:var(--ink);color:#fff}
+.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.4}
+table{border-collapse:collapse}td{padding:3px 10px 3px 0}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;display:none;z-index:9}
+#rot{display:none;position:absolute;top:8px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px}
+@media (orientation:portrait){#rot{display:block}}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--green);width:0}
+</style>
+</head>
+<body>
+<header>
+  <b id="hName">Cardboard Bot</b><span class="pill" id="hDriver"></span>
+  <span class="pill" id="hBatt">-- V</span><span class="pill" id="hLink">connecting</span><span class="pill" id="hPad" hidden>🎮</span>
+  <nav><button data-t="drive" class="on">Drive</button><button data-t="settings">Settings</button><button data-t="diag">Diagnostics</button><button data-t="update">Update</button></nav>
+</header>
+<main>
+<section id="drive" class="on">
+  <div id="rot">Turn your phone sideways for two sticks</div>
+  <div class="stick" id="stL"><div class="base"><div class="knob"></div></div><div class="lbl" id="lblL">drive</div></div>
+  <div class="mid">
+    <div class="msg" id="msg">Connecting…</div>
+    <button class="big" id="arm">ARM</button>
+    <div class="fires" id="fires"></div>
+    <div class="row" style="justify-content:center"><button class="tog" id="slow">🐢 Slow</button></div>
+    <div class="small" style="text-align:center" id="hint">Gamepad: hold Start 1 s to arm, Back to disarm</div>
+  </div>
+  <div class="stick" id="stR"><div class="base"><div class="knob"></div></div><div class="lbl" id="lblR">steer</div></div>
+  <div id="viewer"><div class="card" style="text-align:center">
+    <h3>Someone else is driving</h3><p class="small">You can watch. To drive, take control<span id="pwHint"> with the robot's Wi-Fi password</span>.</p>
+    <p class="row" style="justify-content:center"><input id="takePw" type="password" placeholder="Wi-Fi password"><button class="btn" id="take">Take control</button></p>
+  </div></div>
+</section>
+
+<section id="settings">
+  <div class="card"><h3>Robot</h3>
+    <label>Robot name <input data-k="name" maxlength="23"></label>
+    <label>Driver name <input data-k="driver" maxlength="23"></label>
+    <label>Wi-Fi name (blank = CGW-robot name) <input data-k="ap" maxlength="32"></label>
+    <label>Wi-Fi password (blank = open, else 8+) <input data-k="pw" type="password" maxlength="63"></label>
+    <label>Wi-Fi channel <select data-k="ch" data-n><option value="0">Auto (quietest)</option><option>1</option><option>6</option><option>11</option></select></label>
+    <label>IO3 reads the battery (JP1 bridged) <input type="checkbox" data-k="bsense"></label>
+  </div>
+  <div class="card"><h3>Driving</h3>
+    <label>Mode <select data-k="drive.mode" data-n><option value="2">Arcade, split sticks</option><option value="1">Arcade, one stick</option><option value="0">Tank</option></select></label>
+    <label>Invert left motor <input type="checkbox" data-k="drive.invL"></label>
+    <label>Invert right motor <input type="checkbox" data-k="drive.invR"></label>
+    <label>Swap motors <input type="checkbox" data-k="drive.swap"></label>
+    <label>Reverse steering <input type="checkbox" data-k="drive.revSteer"></label>
+    <label>Top speed % <input type="number" min="10" max="100" data-k="drive.max"></label>
+    <label>Slow mode % <input type="number" min="5" max="100" data-k="drive.slow"></label>
+    <label>Slow mode gamepad button <select data-k="drive.slowBtn" data-n class="btnsel"></select></label>
+    <label>Turn rate % <input type="number" min="10" max="100" data-k="drive.turn"></label>
+    <label>Extra ramp when spinning (ms) <input type="number" min="0" max="2000" data-k="drive.spin"></label>
+    <label>Expo % <input type="number" min="0" max="100" data-k="drive.expo"></label>
+    <label>Deadzone % <input type="number" min="0" max="40" data-k="drive.dead"></label>
+    <label>Ramp, 0 to full (ms) <input type="number" min="0" max="2000" data-k="drive.ramp"></label>
+    <label>Motor voltage cap (V) <input type="number" min="3" max="8.4" step="0.1" data-k="drive.vcap"></label>
+  </div>
+  <div id="outCards"></div>
+  <div class="card"><h3>Safety</h3>
+    <label>Weapon cut-off, no signal (ms) <input type="number" min="100" max="1000" data-k="safe.wpnCut"></label>
+    <label>Failsafe, no signal (ms) <input type="number" min="300" max="3000" data-k="safe.fs"></label>
+    <label>Re-arm grace (ms) <input type="number" min="0" max="5000" data-k="safe.grace"></label>
+    <label>Drops in 60 s before disarm <input type="number" min="1" max="20" data-k="safe.drops"></label>
+    <label>Weapon lockout below (V) <input type="number" min="5" max="8" step="0.1" data-k="safe.lowWpn"></label>
+    <label>Drive stops below (V) <input type="number" min="5" max="8" step="0.1" data-k="safe.lowDrv"></label>
+  </div>
+  <div class="card"><h3>Updates</h3>
+    <label>Firmware source <select data-k="src"><option value="stable">Stable</option><option value="beta">Beta</option><option value="custom">Custom URL</option></select></label>
+    <label>Custom firmware folder URL <input data-k="srcUrl" placeholder="https://you.github.io/repo/fw/branch/"></label>
+    <label>Club Wi-Fi name <input data-k="wifi.ssid"></label>
+    <label>Club Wi-Fi password <input data-k="wifi.pw" type="password"></label>
+  </div>
+  <p class="row"><button class="btn" id="save">Save settings</button><button class="btn alt" id="reboot" hidden>Restart robot</button></p>
+</section>
+
+<section id="diag">
+  <div class="card"><h3>Battery</h3><table>
+    <tr><td>Pack</td><td id="dV">--</td></tr><tr><td>Per cell (pack ÷ 2)</td><td id="dC">--</td></tr>
+    <tr><td>Lowest since power-on</td><td id="dMin">--</td></tr></table>
+    <p class="small">The board measures the pack, not each cell. Charge state: watch the red LED by the USB-C port (on = charging, off = full).</p></div>
+  <div class="card"><h3>Link</h3><table>
+    <tr><td>Signal (RSSI)</td><td id="dR">--</td></tr><tr><td>Wi-Fi</td><td id="dS">--</td></tr><tr><td>Phones connected</td><td id="dN">--</td></tr></table></div>
+  <div class="card"><h3>Robot</h3><table>
+    <tr><td>Firmware</td><td id="dVer">--</td></tr><tr><td>Running from</td><td id="dSlot">--</td></tr><tr><td>Up for</td><td id="dUp">--</td></tr>
+    <tr><td>Free memory</td><td id="dHeap">--</td></tr><tr><td>Last restarts (newest first)</td><td id="dRst">--</td></tr>
+    <tr><td>Motors L / R</td><td id="dM">--</td></tr><tr><td>Outputs (µs)</td><td id="dO">--</td></tr></table></div>
+</section>
+
+<section id="update">
+  <div class="card"><h3>Firmware</h3><p>Running <b id="uVer">--</b>.</p>
+    <p class="small">Updates are blocked while armed. If a new version fails to start, the robot goes back to this one by itself.</p></div>
+  <div class="card"><h3>From the internet</h3>
+    <p class="small">The robot joins the club Wi-Fi (set it under Settings → Updates) and downloads <span id="uSrc">--</span>. Your phone disconnects while it does; reconnect when the light stops flashing white.</p>
+    <button class="btn" id="otaPull">Update from internet</button></div>
+  <div class="card"><h3>From a file</h3>
+    <p class="small">Pick an <code>app.bin</code> from the web flasher's firmware page.</p>
+    <p><input type="file" id="otaFile" accept=".bin"></p><div class="bar"><i id="otaBar"></i></div>
+    <p><button class="btn" id="otaUp">Upload</button> <span id="otaMsg" class="small"></span></p></div>
+</section>
+</main>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const BTN=["A / ✕","B / ○","X / □","Y / △","LB / L1","RB / R1","LT / L2","RT / R2","Back / Share","Start / Options","Left stick","Right stick","D-pad up","D-pad down","D-pad left","D-pad right","Home / PS"];
+const AX=["Left stick X","Left stick up","Right stick X","Right stick up","LT / L2","RT / R2"];
+let ws=null, role="viewer", cfg=null, st={}, ver="", rebootNeeded=false;
+let myId; try{myId=localStorage.getItem("cgwId")}catch(e){}
+if(!myId){myId=[...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,"0")).join("");try{localStorage.setItem("cgwId",myId)}catch(e){}}
+function toast(t,ms=2500){const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",ms)}
+function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+
+// ---------- tabs
+$$("nav button").forEach(b=>b.onclick=()=>{$$("nav button").forEach(x=>x.classList.toggle("on",x===b));$$("main section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));if(b.dataset.t==="diag")send({t:"diag"});if(b.dataset.t==="settings")fillForm()});
+
+// ---------- connection
+function connect(){
+  ws=new WebSocket("wss://"+location.host+"/ws");ws.binaryType="arraybuffer";
+  ws.onopen=()=>{send({t:"hello",id:myId});$("#hLink").textContent="linked";$("#hLink").className="pill ok"};
+  ws.onclose=()=>{ws=null;$("#hLink").textContent="reconnecting";$("#hLink").className="pill bad";setTimeout(connect,500)};
+  ws.onmessage=e=>{if(typeof e.data!=="string")return;let m;try{m=JSON.parse(e.data)}catch(x){return}on(m)};
+}
+function on(m){
+  if(m.t==="hello"){role=m.role;cfg=m.cfg;ver=m.ver;$("#uVer").textContent=ver;$("#dVer").textContent=ver;$("#pwHint").hidden=!m.pwSet;$("#takePw").hidden=!m.pwSet;applyCfg()}
+  else if(m.t==="role"){role=m.role;toast(role==="driver"?"You're driving":"Another phone took control")}
+  else if(m.t==="st"){st=m;role=m.you?"driver":"viewer";showStatus()}
+  else if(m.t==="saved"){rebootNeeded=m.reboot;$("#reboot").hidden=!m.reboot;toast(m.reboot?"Saved. Restart the robot to apply Wi-Fi changes.":"Saved")}
+  else if(m.t==="diag")showDiag(m);
+  else if(m.t==="err")toast(m.msg);
+  $("#viewer").classList.toggle("on",role!=="driver");
+}
+$("#take").onclick=()=>send({t:"take",pw:$("#takePw").value,id:myId});
+
+// ---------- status
+const LED=["Starting","Updating","Waiting for a phone","Connected, weapon safe","Battery low","ARMED","WEAPON RUNNING","Link lost: motors off"];
+function showStatus(){
+  const v=st.vb;
+  if(v>2){const pc=Math.max(0,Math.min(100,Math.round((v/2-3.3)/0.9*100)));$("#hBatt").textContent=v.toFixed(2)+" V · "+pc+"%";$("#hBatt").className="pill "+(st.dl||st.wl?"bad":pc<25?"warn":"")}
+  else $("#hBatt").textContent=v<0?"no battery sense":"USB power";
+  $("#hName").textContent=(cfg&&cfg.name)||"Cardboard Bot";$("#hDriver").textContent=st.driver?"driver: "+st.driver:"";$("#hDriver").hidden=!st.driver;
+  const a=$("#arm");a.textContent=st.armed?"DISARM":"ARM";a.classList.toggle("armed",st.armed);
+  const msg=$("#msg");let t=LED[st.led]||"";if(st.upd)t=st.upd;else if(!st.armed&&st.reason&&st.led!==7)t=st.reason;if(st.wl&&!st.armed)t="Battery low: weapon locked out";if(st.dl)t="Battery very low: drive stopped";
+  msg.textContent=t;msg.className="msg"+(st.armed||st.fs||st.dl?" bad":"");
+  if(st.rssi)$("#dR").textContent=st.rssi+" dBm";
+  $("#dV").textContent=v>2?v.toFixed(2)+" V":"--";$("#dC").textContent=v>2?(v/2).toFixed(2)+" V":"--";
+  $("#dM").textContent=st.ml+"% / "+st.mr+"%";$("#dO").textContent=(st.out||[]).join(" · ");
+}
+function showDiag(m){
+  $("#dMin").textContent=m.vmin>0?m.vmin.toFixed(2)+" V":"--";$("#dR").textContent=m.rssi?m.rssi+" dBm":"--";
+  $("#dS").textContent=m.ssid+" · channel "+m.ch;$("#dN").textContent=m.clients;$("#dVer").textContent=m.ver;$("#dSlot").textContent=m.slot;
+  $("#dUp").textContent=Math.floor(m.up/60)+" min "+m.up%60+" s";$("#dHeap").textContent=Math.round(m.heap/1024)+" KB (lowest "+Math.round(m.heapMin/1024)+" KB)";
+  $("#dRst").textContent=m.resets.join(", ")||"--";
+}
+setInterval(()=>{if($("#diag").classList.contains("on"))send({t:"diag"})},2000);
+
+// ---------- fire buttons
+function applyCfg(){
+  if(!cfg)return;
+  const f=$("#fires");f.innerHTML="";const names=["OUT1","OUT2","IO3","IO21"];
+  cfg.out.forEach((o,i)=>{if(!o.type||(i===2&&cfg.bsense))return;const b=document.createElement("button");b.className="fire";b.dataset.i=i;
+    b.textContent=(o.type===1?"ESC ":"SERVO ")+names[i]+(o.mode===1?" ⇄":o.mode===2?" ↕":"");
+    b.onpointerdown=e=>{e.preventDefault();fireDown[i]=true;b.classList.add("down")};
+    const up=()=>{fireDown[i]=false;b.classList.remove("down")};b.onpointerup=up;b.onpointerleave=up;b.onpointercancel=up;f.appendChild(b)});
+  const m=cfg.drive.mode;$("#lblL").textContent=m===0?"left track":m===1?"drive + steer":"throttle";$("#lblR").textContent=m===0?"right track":m===1?"":"steer";
+  $("#stR").style.visibility=m===1?"hidden":"visible";
+  $("#uSrc").textContent=cfg.src==="custom"?(cfg.srcUrl||"(no URL set)"):cfg.src+" firmware";
+  fillForm();
+}
+
+// ---------- sticks
+const fireDown=[false,false,false,false];let slow=false;
+$("#slow").onclick=()=>{slow=!slow;$("#slow").classList.toggle("on",slow)};
+function stick(el){
+  const base=el.querySelector(".base"),knob=el.querySelector(".knob"),s={x:0,y:0,id:null};const R=55;let cx=0,cy=0;
+  el.addEventListener("pointerdown",e=>{if(s.id!==null)return;s.id=e.pointerId;el.setPointerCapture(e.pointerId);const r=el.getBoundingClientRect();cx=e.clientX;cy=e.clientY;base.style.left=(cx-r.left)+"px";base.style.top=(cy-r.top)+"px";move(e)});
+  function move(e){if(e.pointerId!==s.id)return;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d}s.x=dx/R;s.y=-dy/R;knob.style.transform=`translate(${dx}px,${dy}px)`}
+  el.addEventListener("pointermove",move);
+  const end=e=>{if(e.pointerId!==s.id)return;s.id=null;s.x=s.y=0;knob.style.transform="";base.style.left="50%";base.style.top="55%"};
+  el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);return s;
+}
+const sL=stick($("#stL")),sR=stick($("#stR"));
+
+// ---------- send loop (50 Hz)
+let seq=0,startHeld=0,backWas=false;
+function pick(a,b){return Math.abs(a)>Math.abs(b)?a:b}
+function q(v){return Math.max(-127,Math.min(127,Math.round(v*127)))}
+setInterval(()=>{
+  let lx=sL.x,ly=sL.y,rx=sR.x,ry=sR.y,lt=0,rt=0,btn=0;
+  const pads=navigator.getGamepads?navigator.getGamepads():[];let pad=null;for(const p of pads)if(p&&p.connected){pad=p;break}
+  $("#hPad").hidden=!pad;
+  if(pad){const a=pad.axes;lx=pick(lx,a[0]||0);ly=pick(ly,-(a[1]||0));rx=pick(rx,a[2]||0);ry=pick(ry,-(a[3]||0));
+    pad.buttons.forEach((b,i)=>{if(i<17&&b.pressed)btn|=1<<i});lt=pad.buttons[6]?pad.buttons[6].value:0;rt=pad.buttons[7]?pad.buttons[7].value:0;
+    // Start held 1 s arms, Back disarms
+    if(pad.buttons[9]&&pad.buttons[9].pressed){if(!startHeld)startHeld=Date.now();else if(Date.now()-startHeld>1000&&startHeld>0){if(!st.armed)send({t:"arm"});startHeld=-1}}else startHeld=0;
+    const back=pad.buttons[8]&&pad.buttons[8].pressed;if(back&&!backWas&&st.armed)send({t:"disarm"});backWas=back}
+  fireDown.forEach((d,i)=>{if(d)btn|=1<<(20+i)});if(slow)btn|=1<<24;
+  if(role!=="driver"||!ws||ws.readyState!==1)return;
+  const b=new ArrayBuffer(12),v=new DataView(b);v.setUint8(0,1);v.setUint8(1,seq++&255);
+  [lx,ly,rx,ry].forEach((x,i)=>v.setInt8(2+i,q(x)));v.setUint8(6,Math.round(lt*255));v.setUint8(7,Math.round(rt*255));v.setUint32(8,btn>>>0,true);ws.send(b);
+},20);
+$("#arm").onclick=()=>send({t:st.armed?"disarm":"arm"});
+
+// ---------- settings form
+function getK(o,k){return k.split(".").reduce((a,p)=>a==null?a:a[p],o)}
+function setK(o,k,v){const p=k.split(".");let a=o;for(let i=0;i<p.length-1;i++)a=a[p[i]];a[p[p.length-1]]=v}
+function btnOptions(sel,none){sel.innerHTML=(none?`<option value="255">${none}</option>`:"")+BTN.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}
+function outCard(i){
+  const n=["OUT1 (GPIO10)","OUT2 (GPIO20)","IO3 (GPIO3)","IO21 (GPIO21)"][i];const k=`out.${i}.`;
+  return `<div class="card"><h3>${n}</h3>
+  <label>Type <select data-k="${k}type" data-n><option value="0">Off</option><option value="1">ESC</option><option value="2">Servo</option></select></label>
+  <label>Mode <select data-k="${k}mode" data-n><option value="0">Hold to fire</option><option value="1">Toggle</option><option value="2">Variable / position (axis)</option></select></label>
+  <label>Gamepad button <select data-k="${k}btn" data-n class="btnsel" data-none="On-screen button only"></select></label>
+  <label>Axis (variable mode) <select data-k="${k}axis" data-n>${AX.map((a,j)=>`<option value="${j}">${a}</option>`).join("")}</select></label>
+  <label>Pulse at stop / 0° (µs) <input type="number" min="400" max="2600" data-k="${k}min"></label>
+  <label>Pulse at full / 180° (µs) <input type="number" min="400" max="2600" data-k="${k}max"></label>
+  <label>ESC: max throttle % <input type="number" min="0" max="100" data-k="${k}maxPct"></label>
+  <label>ESC: spin-up time (ms) <input type="number" min="0" max="10000" data-k="${k}spin"></label>
+  <label>Servo: rest angle <input type="number" min="0" max="180" data-k="${k}rest"></label>
+  <label>Servo: fire angle <input type="number" min="0" max="180" data-k="${k}fire"></label>
+  <label>Servo: speed (°/s, 0 = full) <input type="number" min="0" max="2000" data-k="${k}speed"></label>
+  <p class="row small">ESC calibration (props / weapon off!): <button class="btn alt" data-cal="${i}" data-step="max">1. Full</button><button class="btn alt" data-cal="${i}" data-step="min">2. Stop</button><button class="btn alt" data-cal="${i}" data-step="end">Done</button></p></div>`;
+}
+$("#outCards").innerHTML=[0,1,2,3].map(outCard).join("");
+$$(".btnsel").forEach(s=>btnOptions(s,s.dataset.none));
+$$("[data-cal]").forEach(b=>b.onclick=()=>{const i=+b.dataset.cal,o=cfg.out[i],step=b.dataset.step;
+  send({t:"cal",out:i,us:step==="max"?o.max:step==="min"?o.min:0});
+  toast(step==="max"?"Sending full throttle. Now power the ESC and wait for its beeps.":step==="min"?"Sending stop. Wait for the confirm beeps.":"Calibration done",5000)});
+let dirty=false;$("#settings").addEventListener("input",()=>dirty=true);
+function fillForm(){if(!cfg||dirty)return;$$("[data-k]").forEach(e=>{const v=getK(cfg,e.dataset.k);if(v===undefined)return;if(e.type==="checkbox")e.checked=!!v;else e.value=v})}
+$("#save").onclick=()=>{
+  if(!cfg)return;const c=JSON.parse(JSON.stringify(cfg));
+  $$("[data-k]").forEach(e=>{let v=e.type==="checkbox"?e.checked:e.value;if(e.type==="number"||e.dataset.n!==undefined)v=Number(v);setK(c,e.dataset.k,v)});
+  if(c.pw&&c.pw.length<8)return toast("Wi-Fi password needs 8+ characters, or leave it blank");
+  cfg=c;dirty=false;send({t:"cfg",cfg:c});applyCfg()};
+$("#reboot").onclick=()=>{send({t:"reboot"});toast("Restarting… reconnect to the robot's Wi-Fi",5000)};
+
+// ---------- updates
+$("#otaPull").onclick=()=>{if(!cfg||!cfg.wifi.ssid)return toast("Set the club Wi-Fi under Settings first");if(st.armed)return toast("Disarm first");send({t:"ota"});toast("Updating… the light flashes white",6000)};
+$("#otaUp").onclick=()=>{
+  const f=$("#otaFile").files[0];if(!f)return toast("Pick a .bin file");if(st.armed)return toast("Disarm first");
+  const x=new XMLHttpRequest();x.open("POST","/ota?id="+myId);
+  x.upload.onprogress=e=>{if(e.lengthComputable)$("#otaBar").style.width=(100*e.loaded/e.total)+"%"};
+  x.onload=()=>{$("#otaMsg").textContent=x.status===200?"Done. The robot restarts; reconnect in a few seconds.":x.responseText};
+  x.onerror=()=>{$("#otaMsg").textContent="Upload failed"};$("#otaMsg").textContent="Uploading…";x.send(f)};
+
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cardboard Bot Flasher</title>
+<meta name="description" content="Install Cardboard Bot firmware on a Columbia Gadget Works robot from the browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23b98a52'/><path d='M4 11V6h8v5M6 6V4h4v2' stroke='%232b2118' stroke-width='1.5' fill='none'/></svg>">
+<style>
+:root{--bg:#f4ede1;--card:#fffaf2;--ink:#2b2118;--muted:#6f604f;--line:#e2d6c3;--kraft:#b98a52;--red:#c8402e;--green:#2f8a4c;--warn:#b5651d}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1d1813;--card:#272019;--ink:#f1e8da;--muted:#b3a38f;--line:#3d3328;--kraft:#c99a62}}
+:root[data-theme=dark]{--bg:#1d1813;--card:#272019;--ink:#f1e8da;--muted:#b3a38f;--line:#3d3328;--kraft:#c99a62}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;margin:8px 0 4px}h2{font-size:18px;margin:0 0 10px}
+.lede{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+.src{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.src label{flex-direction:row;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--line);border-radius:99px;color:var(--ink);cursor:pointer}
+.src input{margin:0}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+button{font:600 15px system-ui;border:0;border-radius:10px;padding:12px 16px;background:var(--ink);color:var(--bg);cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+button:disabled{opacity:.4;cursor:default}
+.note{font-size:14px;color:var(--muted)}
+.warn{border-left:4px solid var(--warn);padding:8px 12px;background:var(--card);border-radius:6px;margin:0 0 14px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:220px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:10px 0 0}
+.ver{font-weight:600}
+.hidden{display:none}
+code{font-size:90%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cardboard Bot Flasher</h1>
+  <p class="lede">Columbia Gadget Works · install or update the firmware on a robot's XIAO ESP32-C3 over USB.</p>
+
+  <div class="warn hidden" id="noSerial">This browser can't talk to USB serial devices. Use desktop <b>Chrome</b> or <b>Edge</b>, or <b>Firefox 151</b> or later.</div>
+
+  <div class="card">
+    <h2>1 · Plug in the robot</h2>
+    <p class="note">Plug the XIAO into this computer with a USB-C data cable. The robot's power switch can be on or off.
+      If the connect list shows nothing, hold the XIAO's <b>B</b> (boot) button while plugging it in.</p>
+    <div class="btns"><button id="connect">Connect</button><span class="note ver" id="chipInfo"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Firmware</h2>
+    <div class="src" id="srcs">
+      <label><input type="radio" name="src" value="stable" checked> Stable</label>
+      <label><input type="radio" name="src" value="beta"> Beta</label>
+      <label><input type="radio" name="src" value="custom"> Custom repo / branch</label>
+      <label><input type="radio" name="src" value="local"> Local .bin file</label>
+    </div>
+    <div class="grid hidden" id="customBox">
+      <label>GitHub owner / repo <input id="repo" placeholder="ColumbiaGadgetWorks/cardboard-bot-v2"></label>
+      <label>Branch or tag <input id="branch" placeholder="main"></label>
+    </div>
+    <div class="hidden" id="localBox"><label>App image (<code>app.bin</code>) <input type="file" id="localFile" accept=".bin"></label>
+      <p class="note">Bootloader and partition table come from Stable.</p></div>
+    <p class="note">Version: <span class="ver" id="fwVer">loading…</span></p>
+  </div>
+
+  <div class="card">
+    <h2>3 · Robot settings</h2>
+    <p class="note" id="cfgNote">These go into the robot's settings area in the same pass. After you connect, the robot's current settings are filled in.</p>
+    <div class="grid">
+      <label>Robot name <input id="name" maxlength="23" placeholder="Tank"></label>
+      <label>Driver name <input id="driver" maxlength="23"></label>
+      <label>Wi-Fi name (blank: CGW-robot name) <input id="ap" maxlength="32"></label>
+      <label>Wi-Fi password (optional, 8+ characters) <input id="pw" type="password" maxlength="63"></label>
+      <label>Wi-Fi channel <select id="ch"><option value="0">Auto (quietest)</option><option>1</option><option>6</option><option>11</option></select></label>
+      <label>Updates from <select id="upd"><option value="stable">Stable</option><option value="beta">Beta</option><option value="custom">This custom source</option></select></label>
+      <label>Club Wi-Fi name (for updates) <input id="wifiSsid" maxlength="32"></label>
+      <label>Club Wi-Fi password <input id="wifiPw" type="password" maxlength="63"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4 · Install</h2>
+    <div class="btns">
+      <button id="install" disabled>Connect &amp; install</button>
+      <button class="alt" id="update" disabled>Update, keep settings</button>
+      <button class="alt" id="settingsOnly" disabled>Settings only</button>
+      <button class="danger" id="erase" disabled>Erase</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <p class="note" id="status">Connect a robot to start.</p>
+    <details><summary class="note">Log</summary><pre id="log"></pre></details>
+  </div>
+
+  <div class="card">
+    <h2>After installing</h2>
+    <p class="note">The robot restarts and the status light pulses blue. On a phone, join the robot's Wi-Fi
+      (<code>CGW-</code> and its name), then open <b>https://192.168.4.1</b> in Chrome or Safari. Accept the certificate warning once.
+      Robots already running this firmware can also update themselves from the phone page (Update tab).</p>
+    <p class="note">Source and board files: <a href="https://github.com/ColumbiaGadgetWorks/cardboard-bot-v2">github.com/ColumbiaGadgetWorks/cardboard-bot-v2</a></p>
+  </div>
+</div>
+<script type="module" src="flasher.js"></script>
+</body>
+</html>
