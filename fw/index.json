@@ -1,10 +1,28 @@
 {
  "builds": [
   {
+   "name": "beta",
+   "version": "2fc739a",
+   "date": "2026-10-29T13:03:47+00:00",
+   "ref": "main"
+  },
+  {
    "name": "firmware",
    "version": "2fc739a",
    "date": "2026-10-29T13:00:32+00:00",
    "ref": "firmware"
+  },
+  {
+   "name": "main",
+   "version": "2fc739a",
+   "date": "2026-10-29T13:03:47+00:00",
+   "ref": "main"
+  },
+  {
+   "name": "stable",
+   "version": "2fc739a",
+   "date": "2026-10-29T13:03:47+00:00",
+   "ref": "main"
   }
  ]
 }
