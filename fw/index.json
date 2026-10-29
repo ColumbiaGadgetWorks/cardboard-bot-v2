@@ -1,0 +1,10 @@
+{
+ "builds": [
+  {
+   "name": "firmware",
+   "version": "2fc739a",
+   "date": "2026-10-29T13:00:32+00:00",
+   "ref": "firmware"
+  }
+ ]
+}
