@@ -2,17 +2,20 @@
 # Publish one firmware build (and, from main, the flasher site) to the gh-pages branch.
 #   ci/publish.sh <fw dir> <ref name> <ref type: branch|tag>
 set -euo pipefail
+trap 'echo "::error::publish.sh line $LINENO: $BASH_COMMAND"' ERR
 FW=$1 REF=$2 TYPE=$3
+# the temp clone doesn't get actions/checkout's credentials, so use the job token directly
+REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 NAME=$(echo "$REF" | sed 's/[^A-Za-z0-9._-]/-/g')
 SRC=$(pwd)
 WORK=$(mktemp -d)
 
 git config --global user.name "github-actions[bot]"
 git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
-  git clone --quiet --depth 1 --branch gh-pages "$(git remote get-url origin)" "$WORK/pages"
+if git ls-remote --exit-code --heads "$REMOTE" gh-pages >/dev/null; then
+  git clone --quiet --depth 1 --branch gh-pages "$REMOTE" "$WORK/pages"
 else
-  mkdir -p "$WORK/pages" && cd "$WORK/pages" && git init --quiet -b gh-pages && git remote add origin "$(cd "$SRC" && git remote get-url origin)" && cd "$SRC"
+  mkdir -p "$WORK/pages" && cd "$WORK/pages" && git init --quiet -b gh-pages && git remote add origin "$REMOTE" && cd "$SRC"
 fi
 cd "$WORK/pages"
 
@@ -46,7 +49,9 @@ git add -A
 if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
 git commit --quiet -m "Publish $REF ($(cd "$SRC" && git rev-parse --short HEAD))"
 for i in 1 2 3 4; do
-  if git push --quiet origin gh-pages; then exit 0; fi
+  if out=$(git push origin gh-pages 2>&1); then exit 0; fi
+  echo "::warning::push attempt $i: ${out//$GITHUB_TOKEN/***}"
   sleep $((i * 3)); git pull --quiet --rebase origin gh-pages || true
 done
+echo "::error::could not push to gh-pages"
 exit 1

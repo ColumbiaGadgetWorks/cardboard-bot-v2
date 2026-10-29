@@ -74,4 +74,6 @@ jobs:
           name: firmware
           path: /tmp/fw
       - name: Publish to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ci/publish.sh /tmp/fw "$GITHUB_REF_NAME" "$GITHUB_REF_TYPE"
