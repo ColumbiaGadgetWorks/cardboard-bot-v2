@@ -416,16 +416,27 @@ static const char LANDING[] =
     "<title>Cardboard Bot</title><style>body{font:18px system-ui,sans-serif;margin:24px;background:#f4ede1;color:#2b2118}"
     "a.b{display:block;padding:16px;margin:16px 0;background:#c8402e;color:#fff;text-align:center;border-radius:10px;"
     "text-decoration:none;font-weight:700}small{color:#6b5a48}</style></head><body><h2>Cardboard Bot</h2>"
-    "<p>Open the controller in <b>Chrome</b> or <b>Safari</b> (not this pop-up):</p>"
-    "<a class=b href='https://192.168.4.1/'>https://192.168.4.1</a>"
+    "<p>Open the controller in <b>Chrome</b> or <b>Safari</b>. This sign-in pop-up can't run it.</p>"
+    // Android: an intent link leaves the captive-portal window and opens Chrome directly
+    "<a class=b href='intent://192.168.4.1/#Intent;scheme=https;package=com.android.chrome;end'>Open in Chrome</a>"
+    "<p><small>Not Android, or no Chrome? Open <b>https://192.168.4.1</b> in your browser.</small></p>"
     "<p><small>The first time, the browser warns about the certificate: tap <i>Advanced</i>, then <i>Proceed</i>. "
     "Club phones can <a href='/cgw-robot.crt'>install the certificate</a> once to skip the warning on every robot."
     "</small></p></body></html>";
+
+// What iOS / macOS expect from captive.apple.com when there's no portal
+static const char APPLE_OK[] = "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>";
 
 static esp_err_t landing_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    // iPhones: answer the captive check as "online". Their sign-in sheet can't open the controller and
+    // disconnects from the robot when closed, so it's better that it doesn't appear at all.
+    char ua[96] = "";
+    if (httpd_req_get_hdr_value_str(req, "User-Agent", ua, sizeof(ua)) != ESP_ERR_NOT_FOUND &&
+        strstr(ua, "CaptiveNetworkSupport"))
+        return httpd_resp_send(req, APPLE_OK, sizeof(APPLE_OK) - 1);
     return httpd_resp_send(req, LANDING, sizeof(LANDING) - 1);
 }
 
