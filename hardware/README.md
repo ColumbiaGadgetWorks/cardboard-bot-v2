@@ -1,111 +1,81 @@
-# Cardboard Bot v2 – main board (rev A)
+# Cardboard Bot v2 – main board (rev B)
 
-80 × 46 mm, 2-layer, 2 oz copper. JLCPCB assembles the SMD parts on the top side.
-CGW hand-solders all through-hole parts.
+60 × 46 mm, 2-layer, 2 oz copper, for a **2S or 3S LiPo** on a screw terminal. JLCPCB assembles
+the SMD parts on the top side; CGW hand-solders the through-hole parts. Nothing goes on the back.
 
 | What | Where |
 |---|---|
 | Schematic (PDF) | `docs/schematic.pdf` |
 | KiCad 7 project | `cardboard-bot.kicad_pro` / `.kicad_sch` / `.kicad_pcb` |
 | JLCPCB upload files | `fab/` (gerber zip, BOM, CPL) |
-| Hand-solder list | `fab/cardboard-bot-v2-revA-hand-solder.csv` |
+| Hand-solder list | `fab/cardboard-bot-v2-revB-hand-solder.csv` |
 | Part-number check list | `docs/BOM_CHECK.md` |
 
 ## What's on the board
 
 Parts were picked for JLC stock: Basic or no-fee Preferred parts wherever JLC has one, otherwise a
-well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`).
+well-stocked Extended part (stock checked 28 Oct 2026, see `docs/BOM_CHECK.md`). Everything on the
+battery side is rated above 3S (12.6 V full).
 
-- **Charging:** USB-C (5 V) feeds an IP2320 2S boost charger (8.40 V CC/CV, 1.0 A), wired as in
-  the datasheet's typical application. The NTC pin has a fixed 10k (R33), so temperature sensing
-  is off; a 0603 10k B3380 NTC fits the same pads if it's wanted later. The red charge LED is on
-  while charging, off when full, and blinks on a fault. It works with the robot switched off.
-- **No cell balancing.** The HY2120 BMS still stops charging if either cell passes 4.28 V. Use
-  matched cells (same brand, same batch) and keep them together as a pair.
-- **Cells:** 2 × 18650 in four MY-18650-01 clips on the back. Each clip has three legs, and the
-  two clips of a cell sit 48 mm apart (leg pair to leg pair), per the MYOUNG drawing. A HY2120 BMS plus two
-  HYG015N03LS1C2 FETs give over-current, over-charge and over-discharge protection.
-  A 20 A mini blade fuse follows.
-- **Power switch:** an off-board panel switch (rocker or toggle, SPST, rated 10 A or more at 12 V DC)
-  on 18 AWG wire, soldered to the SW1 wire pads next to the fuse. It carries the full battery
-  current. Charging still works when the switch is off.
-- **VSYS (≈6–8.4 V)** feeds the following:
-  - SMF10CA surge diode (10 V stand-off)
-  - a 470 µF through-hole bulk capacitor by the ESC terminals
-  - both ESC screw terminals (J9, J10)
-  - the DRV8833
-- **Reset protection:** the TPS54202 5 V buck runs from VSYS behind a Schottky diode and a
-  470 µF hold-up capacitor. The ESC current spikes that used to reset the ESP32 can't pull the
-  5 V rail down.
-- **Drive:** DRV8833 with 0.1 Ω sense resistors (Basic part), so each motor is limited to about 2 A.
-  Motor outputs go to 3.5 mm screw terminals J3 (left) and J4 (right).
-- **Outputs:** four 3-pin 2.54 mm headers, pinned GND / V+ / SIG:
-  - OUT1 (GPIO10) and OUT2 (GPIO20), with 10k pull-downs so ESCs see "low" while the ESP32 boots
-  - IO3 and IO21 (spare GPIO)
-
-  V+ is 5 V through a Schottky diode, so a BEC on an ESC can't back-feed the board.
-  The firmware decides whether each output drives a servo, an ESC or a plain on/off signal.
-- **Battery sense:** VSYS ÷ 4 goes to GPIO3 (ADC) through JP1, a bridged solder jumper under the
-  XIAO. To use IO3 as a normal GPIO on J7, cut JP1.
-- **I2C header** J2 (GND, 3V3, SCL, SDA) for add-ons.
-- **Status LED:** one LED cut from a WS2812B strip (5 V, 60 LED/m, 10 mm wide), laid flat on the J11
-  pads at the bottom edge. It runs from 5 V through a 1N4148W diode (about 4.2 V), so the ESP32's
-  3.3 V data line is above the LED's 0.7 × VDD input threshold without a level shifter.
-- **Bulk capacitors** C13, C19 and C27 are through-hole radial parts, soldered by CGW.
-  JLC has no Basic SMD electrolytics, and the old SMD ones were out of stock.
+- **Battery input:** 5.08 mm screw terminal J1 (top-left), then a **20 A mini blade fuse**, then two
+  wire pads for an off-board **power switch** (10 A+ DC, 18 AWG). A unidirectional **SMAJ13A**
+  clamps spikes at about 21 V; a reversed battery makes it conduct and blows the fuse.
+- **ESC power:** two 5.08 mm screw terminals on the right edge (ESC 1, ESC 2), after the fuse
+  and switch, with a 470 µF / 25 V bulk capacitor next to them.
+- **Drive:** two **DRV8870** H-bridges (6.5–45 V, 3.6 A peak), one per motor, each next to its
+  3.5 mm motor terminal: **LEFT MOTOR** on the left edge, **RIGHT MOTOR** on the right edge.
+  0.1 Ω sense resistors and VREF = 2.53 V limit each motor to about 2.5 A. The DRV8870 stops
+  below about 6.5 V, so on 2S the drive cuts out near empty (the firmware stops it at 3.0 V/cell anyway).
+- **5 V:** TPS54202 buck (28 V max in) behind a Schottky diode and a 470 µF / 25 V hold-up
+  capacitor, so ESC current spikes can't reset the ESP32. A second Schottky feeds the XIAO, so
+  plugging in its USB while the robot is on is safe.
+- **Outputs:** three 3-pin headers (GND / V+ / SIG): OUT1 (GPIO10), OUT2 (GPIO20), OUT3 (GPIO21).
+  V+ is 5 V through a Schottky per output, so an ESC's BEC can't back-feed the board. The
+  firmware default is two weapon ESCs on OUT1 and OUT2. OUT3's pin carries the ESP32 boot
+  messages for a moment at power-up, so use it for a servo rather than an ESC.
+- **Pull-downs:** 10k on all four motor inputs and all three outputs, so the motors coast and the
+  ESCs see "off" while the ESP32 resets and boots (its pins float until the firmware starts).
+- **Battery sense:** pack ÷ 6 (100k / 20k) on GPIO3, so 3S full (12.6 V) reads 2.1 V. The
+  firmware detects 2S / 3S at power-on.
+- **Status LED:** pads for one LED cut from a WS2812B strip (5 V, 60 LED/m, 10 mm), powered
+  through a 1N4148W (about 4.2 V) so the 3.3 V data line is read reliably.
+- **I2C header** J2 (GND, 3V3, SCL, SDA) with pull-ups, for add-ons.
+- **Mounting:** two M3 holes (left middle, bottom right).
 
 ### XIAO pin map
 
 | XIAO | GPIO | Use |
 |---|---|---|
-| D0 | 2 | SDA |
-| D1 | 3 | IO3 (spare header J7) |
-| D2 / D3 | 4 / 5 | DRV8833 AIN1 / AIN2 (left motor) |
-| D4 / D5 | 6 / 7 | DRV8833 BIN1 / BIN2 (right motor) |
-| D6 | 21 | IO21 (spare header J8) – also UART TX, see quiet boot below |
+| D0 | 2 | SDA (I2C header) |
+| D1 | 3 | Battery sense (pack ÷ 6) |
+| D2 / D3 | 4 / 5 | Left DRV8870 IN1 / IN2 |
+| D4 / D5 | 6 / 7 | Right DRV8870 IN1 / IN2 |
+| D6 | 21 | OUT3 – also UART TX at boot |
 | D7 | 20 | OUT2 |
-| D8 | 8 | SCL |
+| D8 | 8 | SCL (I2C header) |
 | D9 | 9 | RGB LED data (BOOT button pin) |
 | D10 | 10 | OUT1 |
 
 GPIO2, GPIO8 and GPIO9 are strapping pins. They only carry signals that idle high at boot
 (I2C pull-ups, and the BOOT button with the LED data line), so the chip always boots normally.
-
-## Firmware notes
-
-- **Quiet boot:** burn the `UART_PRINT_CONTROL` eFuse (or set the GPIO8-based log suppression),
-  and build with the console off (`CONFIG_ESP_CONSOLE_NONE`). Then GPIO21 stays silent at power-up.
-  The web flasher's first-flash step should do this.
-- **Battery voltage:** read GPIO3 with 11 dB attenuation and multiply by 4 (300k / 100k divider).
-  It reads VSYS, so it only works with the power switch on. Use it for the battery gauge, the
-  low-voltage motor cut-off and the "charge me" warning. The charger has no data link to the ESP32.
-- The DRV8833 nFAULT pin is not connected.
-- The DRV8833 nSLEEP pin is pulled up to 5 V, so the driver is always awake. The 1 s failsafe
-  in firmware brings both inputs low.
+None of them has a pull-down.
 
 ## Before ordering – check these
 
-The IP2320 and the battery clip were checked against their datasheets (LCSC C19191089, C2979183).
-
-1. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` line by line on
-   jlcpcb.com/parts. Stock and Basic/Preferred status change daily.
-2. **JLC placement preview.** `ROT_FIX` in `gen/fab.py` (keyed by LCSC number) holds the corrections
-   read off JLC's first preview. Check every IC, transistor and diode again after uploading;
-   fix that table, not the CSV. JLC flags U3's footprint name (TSOT-23-6 vs SOT-23-6); the pads match.
-3. **Values to sanity-check against the datasheets:**
-   - HY2120 RC filter values
-   - TPS54202 output inductor (10 µH) and capacitors (2 × 22 µF)
-   - R4, which is 1 Ω where the IP2320 datasheet shows 0.5 Ω (the nearest Basic value)
-4. **Fit check:** put a real cell in two clips on a printed 1:1 copy of the board before soldering.
-5. **Assembly:** trim the clip, header and capacitor leads flush on the back. Put a layer of
-   Kapton tape under the cells. Fit the fuse last.
-   - **LED strip:** cut one LED from the strip on the cut lines. Tin the three J11 pads, lay the
-     piece on them with its DIN end (arrow pointing away) on the +5V / DIN / GND pads, and heat each
-     strip pad from the top. The pads at the other end only hold it down. Strips differ: check the
-     strip's +5V / DIN / GND order matches the silkscreen before soldering. If it doesn't, wire it
-     with three short wires instead.
-   - **Power switch:** mount it in the cardboard and run two 18 AWG wires to the SW1 pads. The two ESC screw terminals overhang the
-   bottom edge, so their wire entries face outward.
+1. **LCSC part numbers and stock.** Go through `docs/BOM_CHECK.md` on jlcpcb.com/parts.
+2. **JLC placement preview.** `ROT_FIX` in `gen/fab.py` holds the corrections from rev A's preview.
+   The DRV8870 (U3, U4) is new: check its pin-1 dot against the silkscreen triangle and add a
+   correction if it's turned. JLC flags U1's footprint name (TSOT-23-6 vs SOT-23-6); the pads match.
+3. **Values to sanity-check against the datasheets:** DRV8870 VREF / sense resistor (2.5 A limit),
+   TPS54202 output inductor (10 µH) and capacitors (2 × 22 µF).
+4. **Assembly:**
+   - **LED strip:** cut one LED from the strip on the cut lines. Tin the three J10 pads, lay the
+     piece on them with its DIN end on the +5V / DIN / GND pads (arrow pointing away), and heat
+     each strip pad from the top. Strips differ: check the +5V / DIN / GND order matches the
+     silkscreen first, or wire it with three short wires instead.
+   - **Power switch:** mount it in the cardboard and run two 18 AWG wires to the SW1 pads.
+   - **Battery:** use 14–16 AWG leads into J1. The 5.08 mm terminals are rated about 16 A; for
+     bigger weapons, solder the battery leads instead.
 
 ## Regenerating
 
@@ -113,7 +83,7 @@ Everything is generated from `gen/circuit.py` (parts, LCSC numbers, nets).
 You need KiCad 7 (`kicad-cli` and its Python module), python3-numpy and python3-pil.
 
 ```sh
-python3 gen/gen_footprints.py          # lib/cgw.pretty (XIAO socket, clip, CGW logos)
+python3 gen/gen_footprints.py          # lib/cgw.pretty (XIAO socket, LED strip pads, CGW logos)
 python3 gen/gen_sch.py                 # schematic + lib/cgw.kicad_sym
 kicad-cli sch export pdf -o docs/schematic.pdf cardboard-bot.kicad_sch
 PY=/usr/bin/python3.12
@@ -131,8 +101,8 @@ python3 gen/fab.py                     # fab/ outputs; BOM and CPL designators a
 bash gen/render.sh                     # PNG previews
 ```
 
-`gen_pcb.py` builds the board from scratch, which wipes the routing. A full re-route takes about
-20 minutes. After small changes it is usually easier to edit `cardboard-bot.kicad_pcb` in KiCad directly.
+`gen_pcb.py` builds the board from scratch, which wipes the routing. A full re-route takes a few
+minutes. After small changes it is usually easier to edit `cardboard-bot.kicad_pcb` in KiCad directly.
 `gen/patch_prewire.py NET,...` re-applies the fixed copper of individual nets on a routed board.
 
 This board was routed with `gen/fixroute.py`. `gen/route.py` can also run Freerouting if you have

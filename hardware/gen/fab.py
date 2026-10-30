@@ -51,7 +51,7 @@ def gerbers():
         "--subtract-soldermask", PCB)
     run("kicad-cli", "pcb", "export", "drill", "-o", gdir + "/", "--format", "excellon",
         "--excellon-separate-th", "--generate-map", "--map-format", "gerberx2", PCB)
-    zpath = os.path.join(FAB, "cardboard-bot-v2-revA-gerbers.zip")
+    zpath = os.path.join(FAB, "cardboard-bot-v2-revB-gerbers.zip")
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(os.listdir(gdir)):
             z.write(os.path.join(gdir, f), f)
@@ -68,7 +68,7 @@ def cpl():
             rot = (float(r["Rot"]) + ROT_FIX.get(LCSC_OF.get(r["Ref"], ""), 0)) % 360
             rows.append({"Designator": r["Ref"], "Mid X": f'{float(r["PosX"]):.3f}mm',
                          "Mid Y": f'{float(r["PosY"]):.3f}mm', "Layer": "Top", "Rotation": f"{rot:g}"})
-    out = os.path.join(FAB, "cardboard-bot-v2-revA-CPL.csv")
+    out = os.path.join(FAB, "cardboard-bot-v2-revB-CPL.csv")
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         w.writeheader()
@@ -86,7 +86,7 @@ def bom():
                                     "LCSC Part #": key, "refs": [], "mpn": p.get("mpn", ""),
                                     "verified": p.get("verified", False)})
         g["refs"].append(p["ref"])
-    out = os.path.join(FAB, "cardboard-bot-v2-revA-BOM.csv")
+    out = os.path.join(FAB, "cardboard-bot-v2-revB-BOM.csv")
     with open(out, "w", newline="") as f:
         w = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
         w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])
@@ -97,7 +97,7 @@ def bom():
 
 
 def hand_list():
-    out = os.path.join(FAB, "cardboard-bot-v2-revA-hand-solder.csv")
+    out = os.path.join(FAB, "cardboard-bot-v2-revB-hand-solder.csv")
     with open(out, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Designator", "Part", "Notes", "LCSC (optional)"])

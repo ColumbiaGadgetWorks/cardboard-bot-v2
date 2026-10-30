@@ -54,6 +54,23 @@
         "schematic_color": "rgba(0, 0, 0, 0.000)"
       },
       {
+        "name": "Pwr08",
+        "clearance": 0.2,
+        "track_width": 0.8,
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "diff_pair_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "diff_pair_via_gap": 0.25,
+        "wire_width": 6,
+        "bus_width": 12,
+        "line_style": 0,
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)"
+      },
+      {
         "name": "Pwr03",
         "clearance": 0.2,
         "track_width": 0.3,
@@ -73,7 +90,7 @@
       {
         "name": "Motor",
         "clearance": 0.2,
-        "track_width": 0.4,
+        "track_width": 0.6,
         "via_diameter": 0.8,
         "via_drill": 0.4,
         "microvia_diameter": 0.3,
@@ -92,22 +109,6 @@
       "version": 3
     },
     "netclass_patterns": [
-      {
-        "netclass": "Pwr05",
-        "pattern": "VSYS"
-      },
-      {
-        "netclass": "Pwr05",
-        "pattern": "VFUSE"
-      },
-      {
-        "netclass": "Pwr05",
-        "pattern": "B_NEG"
-      },
-      {
-        "netclass": "Pwr05",
-        "pattern": "BMS_DRAIN"
-      },
       {
         "netclass": "Pwr05",
         "pattern": "+5V"
@@ -134,31 +135,19 @@
       },
       {
         "netclass": "Pwr05",
-        "pattern": "IO3_VP"
+        "pattern": "OUT3_VP"
       },
       {
-        "netclass": "Pwr05",
-        "pattern": "IO21_VP"
+        "netclass": "Pwr08",
+        "pattern": "VSYS"
       },
       {
-        "netclass": "Pwr05",
-        "pattern": "VBUS"
+        "netclass": "Pwr08",
+        "pattern": "VFUSE"
       },
       {
-        "netclass": "Pwr05",
-        "pattern": "CHG_LX"
-      },
-      {
-        "netclass": "Pwr05",
-        "pattern": "CHG_VSYS"
-      },
-      {
-        "netclass": "Pwr03",
+        "netclass": "Pwr08",
         "pattern": "BAT+"
-      },
-      {
-        "netclass": "Pwr03",
-        "pattern": "MID"
       },
       {
         "netclass": "Pwr03",
@@ -182,11 +171,11 @@
       },
       {
         "netclass": "Motor",
-        "pattern": "DRV_AISEN"
+        "pattern": "ISEN_L"
       },
       {
         "netclass": "Motor",
-        "pattern": "DRV_BISEN"
+        "pattern": "ISEN_R"
       }
     ]
   },
