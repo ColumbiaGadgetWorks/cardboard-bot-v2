@@ -1,0 +1,30 @@
+{
+ "name": "Cardboard Bot",
+ "version": "1f5f23c",
+ "ref": "hardware",
+ "sha": "1f5f23cb83a36da44af920735534bb9f3bbf3e56",
+ "date": "2026-10-30T21:44:14+00:00",
+ "chip": "ESP32-C3",
+ "parts": [
+  {
+   "path": "bootloader.bin",
+   "offset": 0
+  },
+  {
+   "path": "partition-table.bin",
+   "offset": 32768
+  },
+  {
+   "path": "ota_data_initial.bin",
+   "offset": 57344
+  },
+  {
+   "path": "app.bin",
+   "offset": 131072
+  }
+ ],
+ "botcfg": {
+  "offset": 65536,
+  "size": 4096
+ }
+}

@@ -19,6 +19,12 @@
    "ref": "flasher-options"
   },
   {
+   "name": "hardware",
+   "version": "1f5f23c",
+   "date": "2026-10-30T21:44:14+00:00",
+   "ref": "hardware"
+  },
+  {
    "name": "main",
    "version": "61b0adc",
    "date": "2026-10-30T21:44:10+00:00",
