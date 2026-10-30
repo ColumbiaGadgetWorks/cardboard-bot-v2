@@ -35,6 +35,8 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
     GET_STR(r, "src", c->src);
     GET_STR(r, "srcUrl", c->src_url);
     GET_BOOL(r, "bsense", c->bsense);
+    GET_NUM(r, "vdiv", c->vdiv);
+    GET_NUM(r, "cells", c->cells);
     GET_BOOL(r, "driveOn", c->drive_on);
     GET_BOOL(r, "ledOn", c->led_on);
     GET_BOOL(r, "captive", c->captive);
@@ -125,6 +127,8 @@ char *cfg_to_json(const bot_cfg_t *c)
     cJSON_AddStringToObject(r, "src", c->src);
     cJSON_AddStringToObject(r, "srcUrl", c->src_url);
     cJSON_AddBoolToObject(r, "bsense", c->bsense);
+    cJSON_AddNumberToObject(r, "vdiv", round2(c->vdiv));
+    cJSON_AddNumberToObject(r, "cells", c->cells);
     cJSON_AddBoolToObject(r, "driveOn", c->drive_on);
     cJSON_AddBoolToObject(r, "ledOn", c->led_on);
     cJSON_AddBoolToObject(r, "captive", c->captive);

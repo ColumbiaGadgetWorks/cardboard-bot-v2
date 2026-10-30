@@ -321,6 +321,7 @@ void web_broadcast_status(void)
     cJSON_AddNumberToObject(j, "led", c->led);
     cJSON_AddStringToObject(j, "reason", c->reason);
     cJSON_AddNumberToObject(j, "vb", c->vbat < 0 ? -1 : (int)(c->vbat * 100) / 100.0);
+    cJSON_AddNumberToObject(j, "cells", c->cells);
     cJSON_AddNumberToObject(j, "ml", (int)(c->motor[0] * 100));
     cJSON_AddNumberToObject(j, "mr", (int)(c->motor[1] * 100));
     cJSON *o = cJSON_AddArrayToObject(j, "out");

@@ -83,14 +83,15 @@ window.cgwTest = { makeImage, parseImage, crc32, sanitize, pagesBase };
 // Same as cfg_defaults() in firmware/main/config.c (JSON names from config_json.c)
 const DEFAULTS = {
   name: "Robot", driver: "", ap: "", pw: "", ch: 0, src: "stable", srcUrl: "",
-  bsense: true, driveOn: true, ledOn: true, captive: true,
-  pins: { ain1: 4, ain2: 5, bin1: 6, bin2: 7, out: [10, 20, 3, 21], led: 9, vbat: 3 },
+  bsense: true, vdiv: 6, cells: 0, driveOn: true, ledOn: true, captive: true,
+  pins: { ain1: 4, ain2: 5, bin1: 6, bin2: 7, out: [10, 20, 21, 2], led: 9, vbat: 3 },
   wifi: { ssid: "", pw: "" },
   drive: { mode: 2, invL: false, invR: false, swap: false, revSteer: false, max: 100, slow: 50, slowBtn: 6,
            turn: 70, spin: 100, expo: 30, dead: 8, ramp: 150, vcap: 6 },
-  out: [0, 1, 2, 3].map((i) => ({ type: i === 0 ? 1 : i === 1 ? 2 : 0, mode: 0, btn: i === 0 ? 5 : i === 1 ? 4 : 255,
-    axis: 5, min: i === 1 ? 500 : 1000, max: i === 1 ? 2500 : 2000, maxPct: 100, spin: 1000, rest: 0, fire: 90, speed: 0 })),
-  safe: { wpnCut: 300, fs: 1000, grace: 1000, drops: 3, lowWpn: 6.4, lowDrv: 6, lockout: true },
+  // two weapon ESCs: output 1 on RB, output 2 on LB
+  out: [0, 1, 2, 3].map((i) => ({ type: i < 2 ? 1 : 0, mode: 0, btn: i === 0 ? 5 : i === 1 ? 4 : 255,
+    axis: 5, min: 1000, max: 2000, maxPct: 100, spin: 1000, rest: 0, fire: 90, speed: 0 })),
+  safe: { wpnCut: 300, fs: 1000, grace: 1000, drops: 3, lowWpn: 3.2, lowDrv: 3.0, lockout: true },
 };
 const XIAO_PINS = [[2, "D0"], [3, "D1"], [4, "D2"], [5, "D3"], [6, "D4"], [7, "D5"], [21, "D6"], [20, "D7"], [8, "D8"], [9, "D9"], [10, "D10"]];
 const BTN = ["A / ✕", "B / ○", "X / □", "Y / △", "LB / L1", "RB / R1", "LT / L2", "RT / R2", "Back / Share", "Start / Options",

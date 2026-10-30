@@ -53,8 +53,8 @@ typedef struct {
     uint16_t fs_ms;        // no packets: failsafe, drive stops
     uint16_t grace_ms;     // reconnect within this after failsafe: still armed
     uint8_t drops;         // this many failsafes in 60 s: disarm
-    float low_wpn;         // pack voltage: weapon lockout
-    float low_drv;         // pack voltage: drive stops
+    float low_wpn;         // volts per cell: weapon lockout
+    float low_drv;         // volts per cell: drive stops
     bool lockout;          // low-battery lockouts on (needs battery sensing)
 } safe_cfg_t;
 
@@ -64,7 +64,7 @@ typedef struct {
     uint8_t ain1, ain2, bin1, bin2;  // DRV8833 inputs: left motor A, right motor B
     uint8_t out[NUM_OUT];            // outputs 1-4
     uint8_t led;                     // WS2812 data
-    uint8_t vbat;                    // battery divider (pack / 4)
+    uint8_t vbat;                    // battery divider (pack / vdiv)
 } pin_cfg_t;
 
 typedef struct {
@@ -77,7 +77,9 @@ typedef struct {
     char wifi_pw[65];
     char src[16];          // firmware source: stable / beta / custom
     char src_url[160];     // custom: base URL of the firmware folder
-    bool bsense;           // read the battery voltage (on the board: JP1 bridged, IO3 output unavailable)
+    bool bsense;           // read the battery voltage
+    float vdiv;            // battery divider ratio: board 6 (100k / 20k); 4 for a 300k / 100k divider
+    uint8_t cells;         // 0 = detect 2S / 3S at power-on
     bool drive_on;         // motor driver fitted
     bool led_on;           // status LED fitted
     bool captive;          // DNS answers every name, so phones show "Sign in to network"

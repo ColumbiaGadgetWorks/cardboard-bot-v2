@@ -6,6 +6,7 @@
 #define ESC_STAGGER_MS 300   // a second ESC starts this long after the first
 #define LOW_FILTER_MS 2000   // battery must stay low this long before a lockout
 #define NO_BATT_V 2.0f       // below this the pack isn't connected (running from USB)
+#define CELLS3_V 8.9f        // above this at power-on it's a 3S pack (2S is 8.4 V full)
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -129,25 +130,28 @@ static void mix(const ctl_input_t *in, const drive_cfg_t *d, float out[2])
 static void battery(ctl_t *c, const bot_cfg_t *cfg, uint32_t now)
 {
     float v = c->vbat;
+    if (v < NO_BATT_V) c->cells = 0;   // pack removed: detect again when one is connected
+    else if (!c->cells) c->cells = cfg->cells ? cfg->cells : (v > CELLS3_V ? 3 : 2);
     if (v < NO_BATT_V || !cfg->safe.lockout) {   // not measured, no pack, or lockouts turned off
         c->weapon_lock = c->drive_lock = false;
         c->low_wpn_since = c->low_drv_since = 0;
         return;
     }
+    v /= c->cells;   // the thresholds are per cell
     // lockouts need 2 s below the threshold (motor current sags the pack) and some hysteresis to clear
     if (v < cfg->safe.low_wpn) {
         if (!c->low_wpn_since) c->low_wpn_since = now ? now : 1;
         if (now - c->low_wpn_since >= LOW_FILTER_MS) c->weapon_lock = true;
     } else {
         c->low_wpn_since = 0;
-        if (v > cfg->safe.low_wpn + 0.2f) c->weapon_lock = false;
+        if (v > cfg->safe.low_wpn + 0.1f) c->weapon_lock = false;
     }
     if (v < cfg->safe.low_drv) {
         if (!c->low_drv_since) c->low_drv_since = now ? now : 1;
         if (now - c->low_drv_since >= LOW_FILTER_MS) c->drive_lock = true;
     } else {
         c->low_drv_since = 0;
-        if (v > cfg->safe.low_drv + 0.3f) c->drive_lock = false;
+        if (v > cfg->safe.low_drv + 0.15f) c->drive_lock = false;
     }
 }
 
@@ -252,7 +256,7 @@ void ctl_step(ctl_t *c, const bot_cfg_t *cfg, uint32_t now, bool out_avail[NUM_O
                 float stepv = o->spin_ms ? (float)dt / o->spin_ms : 1.0f;
                 c->esc_thr[i] = fminf(tgt, c->esc_thr[i] + stepv);
             }
-            esc_rank++;
+            if (tgt > 0) esc_rank++;   // only ESCs that are being fired wait for the ones before them
             if (c->esc_thr[i] > 0.01f) c->weapon_running = true;
             c->out_us[i] = o->min_us + (uint16_t)((o->max_us - o->min_us) * c->esc_thr[i]);
         } else {

@@ -37,6 +37,7 @@ typedef struct {
     bool weapon_lock;    // low battery: weapon locked out
     bool drive_lock;     // very low battery: drive stopped
     bool weapon_running;
+    uint8_t cells;       // 2 or 3 once a pack is seen, 0 before
     char reason[64];     // why it last disarmed / refused to arm
 
     // internal

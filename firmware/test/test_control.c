@@ -195,14 +195,28 @@ static void test_outputs(void)
     CHECK(c.out_us[3] == 1000);
 
     // servo on LB: 500..2500 us, rest 0, fire 90
+    cfg.out[1].type = OUT_SERVO;
+    cfg.out[1].min_us = 500;
+    cfg.out[1].max_us = 2500;
     in.btn = 1u << 4;
     run(&in, 40);
     CHECK(c.out_us[1] == 1500);
     ctl_disarm(&c, "test");
     run(&in, 40);
     CHECK(c.out_us[1] == 500);
-    // IO3 unavailable (battery sense) stays low
+    // an unavailable output stays low
     CHECK(c.out_us[2] == 0);
+
+    // only ESC 2 fired: no stagger wait (ESC 1 is idle)
+    reset();
+    cfg.out[1].spin_ms = 0;
+    memset(&in, 0, sizeof(in));
+    run(&in, 100);
+    ctl_arm(&c, &cfg, now);
+    run(&in, 40);
+    in.btn = 1u << 4;
+    run(&in, 40);
+    CHECK(c.out_us[0] == 1000 && c.out_us[1] == 2000);
 }
 
 static void test_battery(void)
@@ -249,7 +263,10 @@ static void test_features(void)
     cfg_defaults(&p);
     bool av[NUM_OUT];
     cfg_out_avail(&p, av);
-    CHECK(av[0] && av[1] && !av[2] && av[3]);   // IO3 is the battery input
+    CHECK(av[0] && av[1] && av[2] && av[3]);
+    p.pins.out[2] = p.pins.vbat;                 // an output on the battery input
+    cfg_out_avail(&p, av);
+    CHECK(!av[2]);
     p.bsense = false;
     cfg_out_avail(&p, av);
     CHECK(av[2]);
@@ -277,6 +294,38 @@ static void test_features(void)
     CHECK(p.pins.ain1 == 2 && p.pins.ain2 == 8);
 }
 
+static void test_cells(void)
+{
+    // 3S pack: detected at power-on, thresholds scale (3.2 V / cell = 9.6 V weapon lockout)
+    reset();
+    c.vbat = 12.0f;
+    ctl_input_t in = {0};
+    in.ax[AX_LY] = 127;
+    run(&in, 100);
+    CHECK(c.cells == 3);
+    ctl_arm(&c, &cfg, now);
+    c.vbat = 9.4f;
+    run(&in, 2100);
+    CHECK(c.weapon_lock && !c.armed && !c.drive_lock);
+    c.vbat = 8.8f;   // 2.93 V / cell
+    run(&in, 2100);
+    CHECK(c.drive_lock);
+    // pack removed and a 2S plugged in: detected again
+    c.vbat = 0.5f;
+    run(&in, 50);
+    c.vbat = 7.9f;
+    run(&in, 50);
+    CHECK(c.cells == 2 && !c.weapon_lock && !c.drive_lock);
+    // old settings files held 2S pack voltages
+    bot_cfg_t p;
+    cfg_defaults(&p);
+    p.safe.low_wpn = 6.4f;
+    p.safe.low_drv = 6.0f;
+    cfg_sanitize(&p);
+    CHECK(NEAR(p.safe.low_wpn, 3.2f) && NEAR(p.safe.low_drv, 3.0f));
+    CHECK(p.out[0].type == OUT_ESC && p.out[1].type == OUT_ESC && p.out[1].min_us == 1000);
+}
+
 static void test_image(void)
 {
     CHECK(cfg_crc32((const uint8_t *)"123456789", 9) == 0xCBF43926u);
@@ -300,6 +349,7 @@ int main(void)
     test_outputs();
     test_battery();
     test_features();
+    test_cells();
     test_image();
     printf("%d checks, %d failed\n", checks, fails);
     return fails != 0;

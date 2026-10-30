@@ -12,12 +12,14 @@ void cfg_defaults(bot_cfg_t *c)
     strcpy(c->name, "Robot");
     strcpy(c->src, "stable");
     c->bsense = true;
+    c->vdiv = VBAT_DIVIDER;
+    c->cells = 0;
     c->drive_on = true;
     c->led_on = true;
     c->captive = true;
     c->pins = (pin_cfg_t){
         .ain1 = PIN_AIN1, .ain2 = PIN_AIN2, .bin1 = PIN_BIN1, .bin2 = PIN_BIN2,
-        .out = {PIN_OUT1, PIN_OUT2, PIN_IO3, PIN_IO21}, .led = PIN_LED, .vbat = PIN_VBAT,
+        .out = {PIN_OUT1, PIN_OUT2, PIN_OUT3, PIN_OUT4}, .led = PIN_LED, .vbat = PIN_VBAT,
     };
 
     c->drive = (drive_cfg_t){
@@ -31,16 +33,14 @@ void cfg_defaults(bot_cfg_t *c)
             .rest_deg = 0, .fire_deg = 90, .speed = 0,
         };
     }
-    // OUT1: weapon ESC on RB, OUT2: servo flipper on LB. IO3 / IO21 off.
+    // two weapon ESCs: OUT1 on RB, OUT2 on LB. OUT3 / output 4 off.
     c->out[0].type = OUT_ESC;
     c->out[0].btn = 5;
-    c->out[1].type = OUT_SERVO;
+    c->out[1].type = OUT_ESC;
     c->out[1].btn = 4;
-    c->out[1].min_us = 500;
-    c->out[1].max_us = 2500;
 
     c->safe = (safe_cfg_t){
-        .wpn_cut_ms = 300, .fs_ms = 1000, .grace_ms = 1000, .drops = 3, .low_wpn = 6.4f, .low_drv = 6.0f,
+        .wpn_cut_ms = 300, .fs_ms = 1000, .grace_ms = 1000, .drops = 3, .low_wpn = 3.2f, .low_drv = 3.0f,
         .lockout = true,
     };
 }
@@ -123,8 +123,13 @@ void cfg_sanitize(bot_cfg_t *c)
     if (s->wpn_cut_ms > s->fs_ms) s->wpn_cut_ms = s->fs_ms;
     s->grace_ms = clampi(s->grace_ms, 0, 5000);
     s->drops = clampi(s->drops, 1, 20);
-    s->low_wpn = clampf(s->low_wpn, 5.0f, 8.0f);
-    s->low_drv = clampf(s->low_drv, 5.0f, 8.0f);
+    // older settings held 2S pack voltages (6.4 / 6.0): convert to per cell
+    if (s->low_wpn > 4.5f) s->low_wpn /= 2;
+    if (s->low_drv > 4.5f) s->low_drv /= 2;
+    s->low_wpn = clampf(s->low_wpn, 2.8f, 3.8f);
+    s->low_drv = clampf(s->low_drv, 2.8f, 3.8f);
+    c->vdiv = clampf(c->vdiv, 2.0f, 12.0f);
+    if (c->cells != 0 && c->cells != 2 && c->cells != 3) c->cells = 0;
 }
 
 // ---- botcfg partition image (same format as site/flasher.js) ----

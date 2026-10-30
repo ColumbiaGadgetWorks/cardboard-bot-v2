@@ -86,6 +86,7 @@ void hw_outputs(const uint16_t us[NUM_OUT])
 static adc_oneshot_unit_handle_t adc;
 static adc_cali_handle_t cali;
 static bool vbat_on;
+static float vbat_div = VBAT_DIVIDER;
 static adc_channel_t vbat_ch;
 static float vbat_f = -1;
 
@@ -105,7 +106,7 @@ float hw_vbat(void)
         n++;
     }
     if (!n) return vbat_f;
-    float v = sum / (float)n / 1000.0f * VBAT_DIVIDER;
+    float v = sum / (float)n / 1000.0f * vbat_div;
     // light filter; jump straight to the new value when it moves a lot (pack connected / removed)
     vbat_f = (vbat_f < 0 || fabsf(v - vbat_f) > 1.0f) ? v : vbat_f + 0.15f * (v - vbat_f);
     return vbat_f;
@@ -204,6 +205,7 @@ void hw_init(const bot_cfg_t *cfg)
 
     // outputs
     vbat_on = cfg->bsense;
+    vbat_div = cfg->vdiv;
     for (int i = 0; i < NUM_OUT; i++) out_pins[i] = pc->out[i];
     cfg_out_avail(cfg, out_avail);
     ledc_timer_config_t ot = {

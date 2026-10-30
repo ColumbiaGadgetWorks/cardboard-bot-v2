@@ -89,15 +89,17 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
     <label>Wi-Fi channel <select data-k="ch" data-n><option value="0">Auto (quietest)</option><option>1</option><option>6</option><option>11</option></select></label>
   </div>
   <div class="card"><h3>Hardware (restart to apply)</h3>
-    <label>Motor driver connected <input type="checkbox" data-k="driveOn"></label>
+    <label>Motor drivers connected <input type="checkbox" data-k="driveOn"></label>
     <label>Battery voltage reading <input type="checkbox" data-k="bsense"></label>
+    <label>Battery divider ratio (board 6, 300k/100k = 4) <input type="number" min="2" max="12" step="0.1" data-k="vdiv"></label>
+    <label>Battery <select data-k="cells" data-n><option value="0">Detect 2S / 3S</option><option value="2">2S</option><option value="3">3S</option></select></label>
     <label>Low-battery lockouts <input type="checkbox" data-k="safe.lockout"></label>
     <label>Status LED <input type="checkbox" data-k="ledOn"></label>
     <label>"Sign in to network" pop-up <input type="checkbox" data-k="captive"></label>
     <label>Left motor IN1 <select data-k="pins.ain1" data-n data-pin></select></label>
     <label>Left motor IN2 <select data-k="pins.ain2" data-n data-pin></select></label>
-    <label>Right motor IN3 <select data-k="pins.bin1" data-n data-pin></select></label>
-    <label>Right motor IN4 <select data-k="pins.bin2" data-n data-pin></select></label>
+    <label>Right motor IN1 <select data-k="pins.bin1" data-n data-pin></select></label>
+    <label>Right motor IN2 <select data-k="pins.bin2" data-n data-pin></select></label>
     <label>Output 1 pin <select data-k="pins.out.0" data-n data-pin></select></label>
     <label>Output 2 pin <select data-k="pins.out.1" data-n data-pin></select></label>
     <label>Output 3 pin <select data-k="pins.out.2" data-n data-pin></select></label>
@@ -128,8 +130,8 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
     <label>Failsafe, no signal (ms) <input type="number" min="300" max="3000" data-k="safe.fs"></label>
     <label>Re-arm grace (ms) <input type="number" min="0" max="5000" data-k="safe.grace"></label>
     <label>Drops in 60 s before disarm <input type="number" min="1" max="20" data-k="safe.drops"></label>
-    <label>Weapon lockout below (V) <input type="number" min="5" max="8" step="0.1" data-k="safe.lowWpn"></label>
-    <label>Drive stops below (V) <input type="number" min="5" max="8" step="0.1" data-k="safe.lowDrv"></label>
+    <label>Weapon lockout below (V per cell) <input type="number" min="2.8" max="3.8" step="0.05" data-k="safe.lowWpn"></label>
+    <label>Drive stops below (V per cell) <input type="number" min="2.8" max="3.8" step="0.05" data-k="safe.lowDrv"></label>
   </div>
   <div class="card"><h3>Updates</h3>
     <label>Firmware source <select data-k="src"><option value="stable">Stable</option><option value="beta">Beta</option><option value="custom">Custom URL</option></select></label>
@@ -142,7 +144,7 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
 
 <section id="diag">
   <div class="card"><h3>Battery</h3><table>
-    <tr><td>Pack</td><td id="dV">--</td></tr><tr><td>Per cell (pack ÷ 2)</td><td id="dC">--</td></tr>
+    <tr><td>Pack</td><td id="dV">--</td></tr><tr><td id="dCl">Per cell</td><td id="dC">--</td></tr>
     <tr><td>Lowest since power-on</td><td id="dMin">--</td></tr></table>
     <p class="small">The board measures the pack, not each cell. Charge state: watch the red LED by the USB-C port (on = charging, off = full).</p></div>
   <div class="card"><h3>Link</h3><table>
@@ -203,14 +205,15 @@ $("#take").onclick=()=>send({t:"take",pw:$("#takePw").value,id:myId});
 const LED=["Starting","Updating","Waiting for a phone","Connected, weapon safe","Battery low","ARMED","WEAPON RUNNING","Link lost: motors off"];
 function showStatus(){
   const v=st.vb;
-  if(v>2){const pc=Math.max(0,Math.min(100,Math.round((v/2-3.3)/0.9*100)));$("#hBatt").textContent=v.toFixed(2)+" V · "+pc+"%";$("#hBatt").className="pill "+(st.dl||st.wl?"bad":pc<25?"warn":"")}
+  const n=st.cells||2;
+  if(v>2){const pc=Math.max(0,Math.min(100,Math.round((v/n-3.3)/0.9*100)));$("#hBatt").textContent=v.toFixed(2)+" V · "+pc+"%";$("#hBatt").className="pill "+(st.dl||st.wl?"bad":pc<25?"warn":"")}
   else $("#hBatt").textContent=v<0?"no battery sense":"USB power";
   $("#hName").textContent=(cfg&&cfg.name)||"Cardboard Bot";$("#hDriver").textContent=st.driver?"driver: "+st.driver:"";$("#hDriver").hidden=!st.driver;
   const a=$("#arm");a.textContent=st.armed?"DISARM":"ARM";a.classList.toggle("armed",st.armed);
   const msg=$("#msg");let t=LED[st.led]||"";if(st.upd)t=st.upd;else if(!st.armed&&st.reason&&st.led!==7)t=st.reason;if(st.wl&&!st.armed)t="Battery low: weapon locked out";if(st.dl)t="Battery very low: drive stopped";
   msg.textContent=t;msg.className="msg"+(st.armed||st.fs||st.dl?" bad":"");
   if(st.rssi)$("#dR").textContent=st.rssi+" dBm";
-  $("#dV").textContent=v>2?v.toFixed(2)+" V":"--";$("#dC").textContent=v>2?(v/2).toFixed(2)+" V":"--";
+  $("#dV").textContent=v>2?v.toFixed(2)+" V":"--";$("#dC").textContent=v>2?(v/n).toFixed(2)+" V":"--";$("#dCl").textContent="Per cell ("+(st.cells?st.cells+"S":"?")+")";
   $("#dM").textContent=st.ml+"% / "+st.mr+"%";$("#dO").textContent=(st.out||[]).join(" · ");
 }
 function showDiag(m){
@@ -284,7 +287,7 @@ function pinClash(c){const used=new Map(),e=[];const nm=g=>(PINS.find(x=>x[0]===
   c.out.forEach((o,i)=>{if(o.type)take(c.pins.out[i],"output "+(i+1))});return e}
 $$("select[data-pin]").forEach(s=>{s.innerHTML=PINS.filter(p=>s.dataset.pin!=="adc"||(p[0]>=2&&p[0]<=4)).map(([g,d])=>`<option value="${g}">${d} (GPIO${g})</option>`).join("")});
 function outCard(i){
-  const n="Output "+(i+1)+[" (board: OUT1)"," (board: OUT2)"," (board: IO3)"," (board: IO21)"][i];const k=`out.${i}.`;
+  const n="Output "+(i+1)+[" (board: OUT1)"," (board: OUT2)"," (board: OUT3)"," (no header on the board)"][i];const k=`out.${i}.`;
   return `<div class="card"><h3>${n}</h3>
   <label>Type <select data-k="${k}type" data-n><option value="0">Off</option><option value="1">ESC</option><option value="2">Servo</option></select></label>
   <label>Mode <select data-k="${k}mode" data-n><option value="0">Hold to fire</option><option value="1">Toggle</option><option value="2">Variable / position (axis)</option></select></label>
