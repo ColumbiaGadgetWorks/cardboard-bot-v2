@@ -1,0 +1,30 @@
+{
+ "name": "Cardboard Bot",
+ "version": "de21859",
+ "ref": "flasher-options",
+ "sha": "de21859276e6a671e687a8b9bf6307e6a6eb0f8b",
+ "date": "2026-10-30T19:15:27+00:00",
+ "chip": "ESP32-C3",
+ "parts": [
+  {
+   "path": "bootloader.bin",
+   "offset": 0
+  },
+  {
+   "path": "partition-table.bin",
+   "offset": 32768
+  },
+  {
+   "path": "ota_data_initial.bin",
+   "offset": 57344
+  },
+  {
+   "path": "app.bin",
+   "offset": 131072
+  }
+ ],
+ "botcfg": {
+  "offset": 65536,
+  "size": 4096
+ }
+}

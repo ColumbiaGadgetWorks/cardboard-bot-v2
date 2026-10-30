@@ -13,6 +13,12 @@
    "ref": "firmware"
   },
   {
+   "name": "flasher-options",
+   "version": "de21859",
+   "date": "2026-10-30T19:15:27+00:00",
+   "ref": "flasher-options"
+  },
+  {
    "name": "main",
    "version": "8cd5b29",
    "date": "2026-10-29T13:25:17+00:00",
