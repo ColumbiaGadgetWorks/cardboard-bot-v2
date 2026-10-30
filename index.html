@@ -34,6 +34,20 @@ button:disabled{opacity:.4;cursor:default}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:220px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:10px 0 0}
 .ver{font-weight:600}
 .hidden{display:none}
+h3{font-size:15px;margin:16px 0 6px}
+label.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink);margin:8px 0}
+label.check input[type=checkbox]{width:18px;height:18px;margin:0}
+.feat label.check{margin:4px 0}
+input.num{width:64px;padding:3px 5px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:600;padding:4px 6px 4px 0}
+td{padding:4px 8px 4px 0;vertical-align:middle}
+td select,td input{padding:5px;max-width:100%}
+td input[type=number]{width:76px}
+tr.off{opacity:.4}
+button.small{padding:5px 10px;font-size:13px;margin-left:6px}
+.bad{color:var(--red);font-weight:600}
+@media (max-width:640px){.outs th:nth-child(n+4),.outs td:nth-child(n+4){display:none}}
 code{font-size:90%}
 </style>
 </head>
@@ -80,6 +94,45 @@ code{font-size:90%}
       <label>Updates from <select id="upd"><option value="stable">Stable</option><option value="beta">Beta</option><option value="custom">This custom source</option></select></label>
       <label>Club Wi-Fi name (for updates) <input id="wifiSsid" maxlength="32"></label>
       <label>Club Wi-Fi password <input id="wifiPw" type="password" maxlength="63"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="custom"> Change from default settings (pins, features, outputs)</label>
+    <div id="adv" class="hidden">
+      <p class="note">Defaults match the Cardboard Bot main board. Change them for a prototype or different wiring.
+        Settings you don't change here are kept. <button class="alt small" id="advReset" type="button">Reset these to board defaults</button></p>
+      <h3>Features</h3>
+      <div class="feat">
+        <label class="check"><input type="checkbox" data-k="driveOn"> Motor driver (DRV8833) connected</label>
+        <label class="check"><input type="checkbox" data-k="bsense"> Battery voltage reading (pack ÷ 4 divider)</label>
+        <label class="check"><input type="checkbox" data-k="safe.lockout"> Low-battery lockouts (weapon below <input type="number" step="0.1" min="5" max="8" data-k="safe.lowWpn" class="num"> V, drive below <input type="number" step="0.1" min="5" max="8" data-k="safe.lowDrv" class="num"> V)</label>
+        <label class="check"><input type="checkbox" data-k="ledOn"> Status LED (WS2812)</label>
+        <label class="check"><input type="checkbox" data-k="captive"> "Sign in to network" pop-up on phones</label>
+      </div>
+      <h3>Pins</h3>
+      <table class="pins">
+        <tr><th>Connection</th><th>XIAO pin</th><th></th></tr>
+        <tr data-need="driveOn"><td>Left motor IN1</td><td><select data-k="pins.ain1" data-pin></select></td><td class="note">DRV8833 IN1</td></tr>
+        <tr data-need="driveOn"><td>Left motor IN2</td><td><select data-k="pins.ain2" data-pin></select></td><td class="note">DRV8833 IN2</td></tr>
+        <tr data-need="driveOn"><td>Right motor IN3</td><td><select data-k="pins.bin1" data-pin></select></td><td class="note">DRV8833 IN3</td></tr>
+        <tr data-need="driveOn"><td>Right motor IN4</td><td><select data-k="pins.bin2" data-pin></select></td><td class="note">DRV8833 IN4</td></tr>
+        <tr data-out="0"><td>Output 1</td><td><select data-k="pins.out.0" data-pin></select></td><td class="note">board: OUT1</td></tr>
+        <tr data-out="1"><td>Output 2</td><td><select data-k="pins.out.1" data-pin></select></td><td class="note">board: OUT2</td></tr>
+        <tr data-out="2"><td>Output 3</td><td><select data-k="pins.out.2" data-pin></select></td><td class="note">board: IO3</td></tr>
+        <tr data-out="3"><td>Output 4</td><td><select data-k="pins.out.3" data-pin></select></td><td class="note">board: IO21</td></tr>
+        <tr data-need="ledOn"><td>Status LED data</td><td><select data-k="pins.led" data-pin></select></td><td class="note">WS2812 DIN</td></tr>
+        <tr data-need="bsense"><td>Battery input</td><td><select data-k="pins.vbat" data-pin="adc"></select></td><td class="note">D0, D1 or D2 only (analog)</td></tr>
+      </table>
+      <p class="note">D0, D8 and D9 are boot-mode pins: fine for outputs and the LED, but nothing on them may hold them low at power-on. D6 sends boot messages for a moment at power-up.</p>
+      <h3>Outputs</h3>
+      <table class="outs" id="outs"></table>
+      <h3>Driving</h3>
+      <div class="grid">
+        <label>Stick layout <select data-k="drive.mode" data-n><option value="2">Arcade, split sticks</option><option value="1">Arcade, one stick</option><option value="0">Tank</option></select></label>
+        <label>Motor voltage cap (V) <input type="number" min="3" max="8.4" step="0.1" data-k="drive.vcap"></label>
+        <label class="check"><input type="checkbox" data-k="drive.invL"> Invert left motor</label>
+        <label class="check"><input type="checkbox" data-k="drive.invR"> Invert right motor</label>
+        <label class="check"><input type="checkbox" data-k="drive.swap"> Swap left / right</label>
+      </div>
+      <p class="note bad" id="advErr"></p>
     </div>
   </div>
 
