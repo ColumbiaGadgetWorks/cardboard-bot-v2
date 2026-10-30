@@ -55,7 +55,17 @@ typedef struct {
     uint8_t drops;         // this many failsafes in 60 s: disarm
     float low_wpn;         // pack voltage: weapon lockout
     float low_drv;         // pack voltage: drive stops
+    bool lockout;          // low-battery lockouts on (needs battery sensing)
 } safe_cfg_t;
+
+// Which XIAO pin does what. Defaults are the main board's wiring (board.h); a prototype or another
+// board can move them. Any of GPIO 2-10, 20, 21; the battery input must be an ADC pin (GPIO 2, 3, 4).
+typedef struct {
+    uint8_t ain1, ain2, bin1, bin2;  // DRV8833 inputs: left motor A, right motor B
+    uint8_t out[NUM_OUT];            // outputs 1-4
+    uint8_t led;                     // WS2812 data
+    uint8_t vbat;                    // battery divider (pack / 4)
+} pin_cfg_t;
 
 typedef struct {
     char name[24];         // robot name
@@ -67,7 +77,11 @@ typedef struct {
     char wifi_pw[65];
     char src[16];          // firmware source: stable / beta / custom
     char src_url[160];     // custom: base URL of the firmware folder
-    bool bsense;           // JP1 bridged: GPIO3 reads the battery (IO3 output unavailable)
+    bool bsense;           // read the battery voltage (on the board: JP1 bridged, IO3 output unavailable)
+    bool drive_on;         // motor driver fitted
+    bool led_on;           // status LED fitted
+    bool captive;          // DNS answers every name, so phones show "Sign in to network"
+    pin_cfg_t pins;
     drive_cfg_t drive;
     out_cfg_t out[NUM_OUT];
     safe_cfg_t safe;
@@ -78,6 +92,10 @@ void cfg_defaults(bot_cfg_t *c);
 bool cfg_from_json(bot_cfg_t *c, const char *json);
 char *cfg_to_json(const bot_cfg_t *c);   // malloc'd, caller frees
 void cfg_sanitize(bot_cfg_t *c);
+bool cfg_pin_ok(int gpio);
+bool cfg_adc_pin_ok(int gpio);
+// Which outputs can run: a valid pin not taken by the motors, LED, battery input or an earlier output
+void cfg_out_avail(const bot_cfg_t *c, bool avail[NUM_OUT]);
 
 // botcfg partition image: "BCFG", u16 version, u16 length, u32 crc32(json), json, 0xFF padding
 #define BOTCFG_SIZE 4096

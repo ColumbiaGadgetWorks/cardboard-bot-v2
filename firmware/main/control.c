@@ -129,7 +129,7 @@ static void mix(const ctl_input_t *in, const drive_cfg_t *d, float out[2])
 static void battery(ctl_t *c, const bot_cfg_t *cfg, uint32_t now)
 {
     float v = c->vbat;
-    if (v < NO_BATT_V) {   // not measured, or no pack: no lockouts
+    if (v < NO_BATT_V || !cfg->safe.lockout) {   // not measured, no pack, or lockouts turned off
         c->weapon_lock = c->drive_lock = false;
         c->low_wpn_since = c->low_drv_since = 0;
         return;
@@ -194,7 +194,7 @@ void ctl_step(ctl_t *c, const bot_cfg_t *cfg, uint32_t now, bool out_avail[NUM_O
 
     // ---- drive ----
     float target[2] = {0, 0};
-    bool drive_ok = c->linked && !c->failsafe && !c->drive_lock && age <= cfg->safe.fs_ms;
+    bool drive_ok = cfg->drive_on && c->linked && !c->failsafe && !c->drive_lock && age <= cfg->safe.fs_ms;
     if (drive_ok) mix(&c->in, &cfg->drive, target);
     if (!drive_ok) {
         c->drive_cur[0] = c->drive_cur[1] = 0;   // stop at once, no ramp

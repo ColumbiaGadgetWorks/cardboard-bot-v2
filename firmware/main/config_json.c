@@ -35,6 +35,25 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
     GET_STR(r, "src", c->src);
     GET_STR(r, "srcUrl", c->src_url);
     GET_BOOL(r, "bsense", c->bsense);
+    GET_BOOL(r, "driveOn", c->drive_on);
+    GET_BOOL(r, "ledOn", c->led_on);
+    GET_BOOL(r, "captive", c->captive);
+    cJSON *p = cJSON_GetObjectItemCaseSensitive(r, "pins");
+    if (cJSON_IsObject(p)) {
+        pin_cfg_t *x = &c->pins;
+        GET_NUM(p, "ain1", x->ain1);
+        GET_NUM(p, "ain2", x->ain2);
+        GET_NUM(p, "bin1", x->bin1);
+        GET_NUM(p, "bin2", x->bin2);
+        GET_NUM(p, "led", x->led);
+        GET_NUM(p, "vbat", x->vbat);
+        cJSON *po = cJSON_GetObjectItemCaseSensitive(p, "out");
+        if (cJSON_IsArray(po))
+            for (int i = 0; i < NUM_OUT && i < cJSON_GetArraySize(po); i++) {
+                cJSON *e = cJSON_GetArrayItem(po, i);
+                if (cJSON_IsNumber(e)) x->out[i] = e->valuedouble;
+            }
+    }
     cJSON *w = cJSON_GetObjectItemCaseSensitive(r, "wifi");
     if (cJSON_IsObject(w)) {
         GET_STR(w, "ssid", c->wifi_ssid);
@@ -86,6 +105,7 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
         GET_NUM(s, "drops", x->drops);
         GET_NUM(s, "lowWpn", x->low_wpn);
         GET_NUM(s, "lowDrv", x->low_drv);
+        GET_BOOL(s, "lockout", x->lockout);
     }
     cJSON_Delete(r);
     cfg_sanitize(c);
@@ -105,6 +125,19 @@ char *cfg_to_json(const bot_cfg_t *c)
     cJSON_AddStringToObject(r, "src", c->src);
     cJSON_AddStringToObject(r, "srcUrl", c->src_url);
     cJSON_AddBoolToObject(r, "bsense", c->bsense);
+    cJSON_AddBoolToObject(r, "driveOn", c->drive_on);
+    cJSON_AddBoolToObject(r, "ledOn", c->led_on);
+    cJSON_AddBoolToObject(r, "captive", c->captive);
+    const pin_cfg_t *pc = &c->pins;
+    cJSON *p = cJSON_AddObjectToObject(r, "pins");
+    cJSON_AddNumberToObject(p, "ain1", pc->ain1);
+    cJSON_AddNumberToObject(p, "ain2", pc->ain2);
+    cJSON_AddNumberToObject(p, "bin1", pc->bin1);
+    cJSON_AddNumberToObject(p, "bin2", pc->bin2);
+    cJSON *po = cJSON_AddArrayToObject(p, "out");
+    for (int i = 0; i < NUM_OUT; i++) cJSON_AddItemToArray(po, cJSON_CreateNumber(pc->out[i]));
+    cJSON_AddNumberToObject(p, "led", pc->led);
+    cJSON_AddNumberToObject(p, "vbat", pc->vbat);
     cJSON *w = cJSON_AddObjectToObject(r, "wifi");
     cJSON_AddStringToObject(w, "ssid", c->wifi_ssid);
     cJSON_AddStringToObject(w, "pw", c->wifi_pw);
@@ -149,6 +182,7 @@ char *cfg_to_json(const bot_cfg_t *c)
     cJSON_AddNumberToObject(s, "drops", z->drops);
     cJSON_AddNumberToObject(s, "lowWpn", round2(z->low_wpn));
     cJSON_AddNumberToObject(s, "lowDrv", round2(z->low_drv));
+    cJSON_AddBoolToObject(s, "lockout", z->lockout);
     char *out = cJSON_PrintUnformatted(r);
     cJSON_Delete(r);
     return out;

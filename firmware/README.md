@@ -24,6 +24,26 @@ The charger has no data line to the ESP32, so the firmware can't tell when it's 
 state is the red LED by the USB-C port. Cell voltages are also not measured separately: the board
 reads the pack (VSYS ÷ 4 on GPIO3), and the page shows pack ÷ 2 per cell.
 
+## Pins and features
+
+Everything defaults to the main board's wiring, and can be changed for a prototype or other wiring:
+- in the web flasher (tick **Change from default settings**), or
+- on the phone page (**Settings → Hardware**, then restart the robot).
+
+| Setting | Default | Notes |
+|---|---|---|
+| Motor driver connected | on | Off: no motor pins used |
+| Battery voltage reading | on, D1 (GPIO3) | Divider must be pack ÷ 4 (300k / 100k); input must be D0, D1 or D2 |
+| Low-battery lockouts | on, 6.4 V weapon / 6.0 V drive | Needs battery reading |
+| Status LED | on, D9 (GPIO9) | WS2812 data |
+| "Sign in to network" pop-up | on | Off: no captive DNS |
+| Motor IN1–IN4 | D2, D3, D4, D5 | DRV8833 inputs |
+| Outputs 1–4 | D10, D7, D1, D6 | Each Off / ESC / Servo |
+
+Two things can't share a pin. Both pages refuse to save a clash, and the firmware itself turns off a
+clashing output (and resets clashing motor pins to the defaults), so a bad settings file can't drive a
+pin two ways.
+
 ## Settings
 
 Settings are JSON in the 4 KB `botcfg` partition at 0x10000. The image is `"BCFG"`, version 1,

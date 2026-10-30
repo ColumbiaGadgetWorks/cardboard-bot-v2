@@ -87,7 +87,24 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
     <label>Wi-Fi name (blank = CGW-robot name) <input data-k="ap" maxlength="32"></label>
     <label>Wi-Fi password (blank = open, else 8+) <input data-k="pw" type="password" maxlength="63"></label>
     <label>Wi-Fi channel <select data-k="ch" data-n><option value="0">Auto (quietest)</option><option>1</option><option>6</option><option>11</option></select></label>
-    <label>IO3 reads the battery (JP1 bridged) <input type="checkbox" data-k="bsense"></label>
+  </div>
+  <div class="card"><h3>Hardware (restart to apply)</h3>
+    <label>Motor driver connected <input type="checkbox" data-k="driveOn"></label>
+    <label>Battery voltage reading <input type="checkbox" data-k="bsense"></label>
+    <label>Low-battery lockouts <input type="checkbox" data-k="safe.lockout"></label>
+    <label>Status LED <input type="checkbox" data-k="ledOn"></label>
+    <label>"Sign in to network" pop-up <input type="checkbox" data-k="captive"></label>
+    <label>Left motor IN1 <select data-k="pins.ain1" data-n data-pin></select></label>
+    <label>Left motor IN2 <select data-k="pins.ain2" data-n data-pin></select></label>
+    <label>Right motor IN3 <select data-k="pins.bin1" data-n data-pin></select></label>
+    <label>Right motor IN4 <select data-k="pins.bin2" data-n data-pin></select></label>
+    <label>Output 1 pin <select data-k="pins.out.0" data-n data-pin></select></label>
+    <label>Output 2 pin <select data-k="pins.out.1" data-n data-pin></select></label>
+    <label>Output 3 pin <select data-k="pins.out.2" data-n data-pin></select></label>
+    <label>Output 4 pin <select data-k="pins.out.3" data-n data-pin></select></label>
+    <label>Status LED pin <select data-k="pins.led" data-n data-pin></select></label>
+    <label>Battery input pin <select data-k="pins.vbat" data-n data-pin="adc"></select></label>
+    <p class="small" id="pinErr" style="color:var(--red)"></p>
   </div>
   <div class="card"><h3>Driving</h3>
     <label>Mode <select data-k="drive.mode" data-n><option value="2">Arcade, split sticks</option><option value="1">Arcade, one stick</option><option value="0">Tank</option></select></label>
@@ -207,8 +224,8 @@ setInterval(()=>{if($("#diag").classList.contains("on"))send({t:"diag"})},2000);
 // ---------- fire buttons
 function applyCfg(){
   if(!cfg)return;
-  const f=$("#fires");f.innerHTML="";const names=["OUT1","OUT2","IO3","IO21"];
-  cfg.out.forEach((o,i)=>{if(!o.type||(i===2&&cfg.bsense))return;const b=document.createElement("button");b.className="fire";b.dataset.i=i;
+  const f=$("#fires");f.innerHTML="";const names=["OUT1","OUT2","OUT3","OUT4"];const av=outAvail(cfg);
+  cfg.out.forEach((o,i)=>{if(!o.type||!av[i])return;const b=document.createElement("button");b.className="fire";b.dataset.i=i;
     b.textContent=(o.type===1?"ESC ":"SERVO ")+names[i]+(o.mode===1?" ⇄":o.mode===2?" ↕":"");
     b.onpointerdown=e=>{e.preventDefault();fireDown[i]=true;b.classList.add("down")};
     const up=()=>{fireDown[i]=false;b.classList.remove("down")};b.onpointerup=up;b.onpointerleave=up;b.onpointercancel=up;f.appendChild(b)});
@@ -255,8 +272,19 @@ $("#arm").onclick=()=>send({t:st.armed?"disarm":"arm"});
 function getK(o,k){return k.split(".").reduce((a,p)=>a==null?a:a[p],o)}
 function setK(o,k,v){const p=k.split(".");let a=o;for(let i=0;i<p.length-1;i++)a=a[p[i]];a[p[p.length-1]]=v}
 function btnOptions(sel,none){sel.innerHTML=(none?`<option value="255">${none}</option>`:"")+BTN.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}
+// XIAO pins, and which outputs can run (same rules as cfg_out_avail in config.c)
+const PINS=[[2,"D0"],[3,"D1"],[4,"D2"],[5,"D3"],[6,"D4"],[7,"D5"],[21,"D6"],[20,"D7"],[8,"D8"],[9,"D9"],[10,"D10"]];
+function outAvail(c){const p=c.pins,av=[];c.out.forEach((o,i)=>{const g=p.out[i];let ok=true;
+  if(c.driveOn&&[p.ain1,p.ain2,p.bin1,p.bin2].includes(g))ok=false;if(c.ledOn&&g===p.led)ok=false;if(c.bsense&&g===p.vbat)ok=false;
+  for(let j=0;j<i;j++)if(av[j]&&c.out[j].type&&p.out[j]===g)ok=false;av.push(ok)});return av}
+function pinClash(c){const used=new Map(),e=[];const nm=g=>(PINS.find(x=>x[0]===g)||[g,"GPIO"+g])[1];
+  const take=(g,w)=>{if(used.has(g))e.push(nm(g)+" is both "+used.get(g)+" and "+w);else used.set(g,w)};
+  if(c.driveOn)[["ain1","IN1"],["ain2","IN2"],["bin1","IN3"],["bin2","IN4"]].forEach(([k,w])=>take(c.pins[k],"motor "+w));
+  if(c.ledOn)take(c.pins.led,"the LED");if(c.bsense)take(c.pins.vbat,"the battery input");
+  c.out.forEach((o,i)=>{if(o.type)take(c.pins.out[i],"output "+(i+1))});return e}
+$$("select[data-pin]").forEach(s=>{s.innerHTML=PINS.filter(p=>s.dataset.pin!=="adc"||(p[0]>=2&&p[0]<=4)).map(([g,d])=>`<option value="${g}">${d} (GPIO${g})</option>`).join("")});
 function outCard(i){
-  const n=["OUT1 (GPIO10)","OUT2 (GPIO20)","IO3 (GPIO3)","IO21 (GPIO21)"][i];const k=`out.${i}.`;
+  const n="Output "+(i+1)+[" (board: OUT1)"," (board: OUT2)"," (board: IO3)"," (board: IO21)"][i];const k=`out.${i}.`;
   return `<div class="card"><h3>${n}</h3>
   <label>Type <select data-k="${k}type" data-n><option value="0">Off</option><option value="1">ESC</option><option value="2">Servo</option></select></label>
   <label>Mode <select data-k="${k}mode" data-n><option value="0">Hold to fire</option><option value="1">Toggle</option><option value="2">Variable / position (axis)</option></select></label>
@@ -272,6 +300,10 @@ function outCard(i){
   <p class="row small">ESC calibration (props / weapon off!): <button class="btn alt" data-cal="${i}" data-step="max">1. Full</button><button class="btn alt" data-cal="${i}" data-step="min">2. Stop</button><button class="btn alt" data-cal="${i}" data-step="end">Done</button></p></div>`;
 }
 $("#outCards").innerHTML=[0,1,2,3].map(outCard).join("");
+// switching type: swap the pulse range to the new type's default if it's still the old type's
+$$("[data-k$='.type']").forEach(t=>t.addEventListener("change",()=>{const i=t.dataset.k.split(".")[1],lo=$(`[data-k='out.${i}.min']`),hi=$(`[data-k='out.${i}.max']`);
+  if(t.value==="1"&&lo.value==="500"&&hi.value==="2500"){lo.value="1000";hi.value="2000"}
+  if(t.value==="2"&&lo.value==="1000"&&hi.value==="2000"){lo.value="500";hi.value="2500"}}));
 $$(".btnsel").forEach(s=>btnOptions(s,s.dataset.none));
 $$("[data-cal]").forEach(b=>b.onclick=()=>{const i=+b.dataset.cal,o=cfg.out[i],step=b.dataset.step;
   send({t:"cal",out:i,us:step==="max"?o.max:step==="min"?o.min:0});
@@ -282,6 +314,7 @@ $("#save").onclick=()=>{
   if(!cfg)return;const c=JSON.parse(JSON.stringify(cfg));
   $$("[data-k]").forEach(e=>{let v=e.type==="checkbox"?e.checked:e.value;if(e.type==="number"||e.dataset.n!==undefined)v=Number(v);setK(c,e.dataset.k,v)});
   if(c.pw&&c.pw.length<8)return toast("Wi-Fi password needs 8+ characters, or leave it blank");
+  const clash=pinClash(c);$("#pinErr").textContent=clash.join(". ");if(clash.length)return toast("Two things on one pin: see Hardware");
   cfg=c;dirty=false;send({t:"cfg",cfg:c});applyCfg()};
 $("#reboot").onclick=()=>{send({t:"reboot"});toast("Restarting… reconnect to the robot's Wi-Fi",5000)};
 

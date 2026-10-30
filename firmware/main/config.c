@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include "board.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +12,13 @@ void cfg_defaults(bot_cfg_t *c)
     strcpy(c->name, "Robot");
     strcpy(c->src, "stable");
     c->bsense = true;
+    c->drive_on = true;
+    c->led_on = true;
+    c->captive = true;
+    c->pins = (pin_cfg_t){
+        .ain1 = PIN_AIN1, .ain2 = PIN_AIN2, .bin1 = PIN_BIN1, .bin2 = PIN_BIN2,
+        .out = {PIN_OUT1, PIN_OUT2, PIN_IO3, PIN_IO21}, .led = PIN_LED, .vbat = PIN_VBAT,
+    };
 
     c->drive = (drive_cfg_t){
         .mode = DRIVE_SPLIT, .max_pct = 100, .slow_pct = 50, .slow_btn = 6 /* LT */,
@@ -32,7 +41,26 @@ void cfg_defaults(bot_cfg_t *c)
 
     c->safe = (safe_cfg_t){
         .wpn_cut_ms = 300, .fs_ms = 1000, .grace_ms = 1000, .drops = 3, .low_wpn = 6.4f, .low_drv = 6.0f,
+        .lockout = true,
     };
+}
+
+// GPIOs the XIAO ESP32-C3 brings out: D0-D10
+bool cfg_pin_ok(int g) { return (g >= 2 && g <= 10) || g == 20 || g == 21; }
+bool cfg_adc_pin_ok(int g) { return g >= 2 && g <= 4; }
+
+void cfg_out_avail(const bot_cfg_t *c, bool avail[NUM_OUT])
+{
+    for (int i = 0; i < NUM_OUT; i++) {
+        int p = c->pins.out[i];
+        bool ok = cfg_pin_ok(p);
+        if (c->drive_on && (p == c->pins.ain1 || p == c->pins.ain2 || p == c->pins.bin1 || p == c->pins.bin2)) ok = false;
+        if (c->led_on && p == c->pins.led) ok = false;
+        if (c->bsense && p == c->pins.vbat) ok = false;
+        for (int j = 0; j < i; j++)
+            if (avail[j] && c->out[j].type != OUT_OFF && c->pins.out[j] == p) ok = false;
+        avail[i] = ok;
+    }
 }
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -43,6 +71,30 @@ void cfg_sanitize(bot_cfg_t *c)
     if (!c->name[0]) strcpy(c->name, "Robot");
     if (strlen(c->pw) > 0 && strlen(c->pw) < 8) c->pw[0] = 0;   // WPA2 needs 8+; fall back to open
     if (c->ch != 0 && c->ch != 1 && c->ch != 6 && c->ch != 11) c->ch = clampi(c->ch, 1, 11);
+    // pins: anything not on the XIAO goes back to the board default; the motor pins must all differ
+    bot_cfg_t def;
+    cfg_defaults(&def);
+    pin_cfg_t *p = &c->pins;
+    uint8_t *pp[] = {&p->ain1, &p->ain2, &p->bin1, &p->bin2, &p->out[0], &p->out[1], &p->out[2], &p->out[3], &p->led};
+    const uint8_t *dp[] = {&def.pins.ain1, &def.pins.ain2, &def.pins.bin1, &def.pins.bin2, &def.pins.out[0],
+                           &def.pins.out[1], &def.pins.out[2], &def.pins.out[3], &def.pins.led};
+    for (int i = 0; i < 9; i++)
+        if (!cfg_pin_ok(*pp[i])) *pp[i] = *dp[i];
+    if (!cfg_adc_pin_ok(p->vbat)) p->vbat = def.pins.vbat;
+    uint8_t m[4] = {p->ain1, p->ain2, p->bin1, p->bin2};
+    bool clash = false;
+    for (int i = 0; i < 4; i++)
+        for (int j = i + 1; j < 4; j++) clash |= m[i] == m[j];
+    if (c->led_on && c->drive_on) for (int i = 0; i < 4; i++) clash |= m[i] == p->led;
+    if (c->bsense && c->drive_on) for (int i = 0; i < 4; i++) clash |= m[i] == p->vbat;
+    if (clash) {
+        p->ain1 = def.pins.ain1;
+        p->ain2 = def.pins.ain2;
+        p->bin1 = def.pins.bin1;
+        p->bin2 = def.pins.bin2;
+    }
+    if (c->led_on && c->bsense && p->led == p->vbat) c->led_on = false;
+
     drive_cfg_t *d = &c->drive;
     d->mode = clampi(d->mode, 0, 2);
     d->max_pct = clampi(d->max_pct, 10, 100);

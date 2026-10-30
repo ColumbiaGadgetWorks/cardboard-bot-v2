@@ -22,7 +22,8 @@ static const char *TAG = "hw";
 #define MOTOR_FREQ 20000
 #define MOTOR_RES LEDC_TIMER_10_BIT
 #define MOTOR_MAX ((1 << 10) - 1)
-static const int motor_pins[2][2] = {{PIN_AIN1, PIN_AIN2}, {PIN_BIN1, PIN_BIN2}};
+static int motor_pins[2][2];        // from the settings (board default: board.h)
+static bool motors_on;
 static int motor_dir[2] = {2, 2};   // -1, 0, 1; 2 = not set yet
 
 static void pin_static(int pin, int level)
@@ -38,6 +39,7 @@ static void pin_pwm_inverted(int pin, int channel)
 
 void hw_motors(float left, float right)
 {
+    if (!motors_on) return;
     float v[2] = {left, right};
     for (int m = 0; m < 2; m++) {
         float a = fabsf(v[m]);
@@ -65,7 +67,7 @@ void hw_motors(float left, float right)
 // ---- servo / ESC outputs: 50 Hz on LEDC channels 2-5 ----
 #define OUT_FREQ 50
 #define OUT_RES LEDC_TIMER_14_BIT
-static const int out_pins[NUM_OUT] = {PIN_OUT1, PIN_OUT2, PIN_IO3, PIN_IO21};
+static int out_pins[NUM_OUT];
 static bool out_avail[NUM_OUT];
 
 bool hw_out_available(int i) { return i >= 0 && i < NUM_OUT && out_avail[i]; }
@@ -84,6 +86,7 @@ void hw_outputs(const uint16_t us[NUM_OUT])
 static adc_oneshot_unit_handle_t adc;
 static adc_cali_handle_t cali;
 static bool vbat_on;
+static adc_channel_t vbat_ch;
 static float vbat_f = -1;
 
 float hw_vbat(void)
@@ -92,7 +95,7 @@ float hw_vbat(void)
     int sum = 0, n = 0;
     for (int i = 0; i < 8; i++) {
         int raw, mv;
-        if (adc_oneshot_read(adc, ADC_CHANNEL_3, &raw) != ESP_OK) continue;
+        if (adc_oneshot_read(adc, vbat_ch, &raw) != ESP_OK) continue;
         if (cali) {
             if (adc_cali_raw_to_voltage(cali, raw, &mv) != ESP_OK) continue;
         } else {
@@ -165,11 +168,11 @@ void hw_led(led_state_t s, uint32_t now)
     }
 }
 
-void hw_init(const bot_cfg_t *cfg)
+static void motors_init(const pin_cfg_t *pc)
 {
-    // motors: all four inputs low first (coast)
+    // all four inputs low first (coast)
     gpio_config_t io = {
-        .pin_bit_mask = (1ULL << PIN_AIN1) | (1ULL << PIN_AIN2) | (1ULL << PIN_BIN1) | (1ULL << PIN_BIN2),
+        .pin_bit_mask = (1ULL << pc->ain1) | (1ULL << pc->ain2) | (1ULL << pc->bin1) | (1ULL << pc->bin2),
         .mode = GPIO_MODE_OUTPUT,
     };
     gpio_config(&io);
@@ -187,10 +190,22 @@ void hw_init(const bot_cfg_t *cfg)
         ESP_ERROR_CHECK(ledc_channel_config(&ch));
     }
     hw_motors(0, 0);
+}
+
+void hw_init(const bot_cfg_t *cfg)
+{
+    const pin_cfg_t *pc = &cfg->pins;
+    motor_pins[0][0] = pc->ain1;
+    motor_pins[0][1] = pc->ain2;
+    motor_pins[1][0] = pc->bin1;
+    motor_pins[1][1] = pc->bin2;
+    motors_on = cfg->drive_on;
+    if (motors_on) motors_init(pc);
 
     // outputs
     vbat_on = cfg->bsense;
-    for (int i = 0; i < NUM_OUT; i++) out_avail[i] = !(i == 2 && vbat_on);
+    for (int i = 0; i < NUM_OUT; i++) out_pins[i] = pc->out[i];
+    cfg_out_avail(cfg, out_avail);
     ledc_timer_config_t ot = {
         .speed_mode = LEDC_LOW_SPEED_MODE, .duty_resolution = OUT_RES, .timer_num = LEDC_TIMER_1,
         .freq_hz = OUT_FREQ, .clk_cfg = LEDC_AUTO_CLK,
@@ -206,13 +221,18 @@ void hw_init(const bot_cfg_t *cfg)
     }
 
     // battery ADC
+    adc_unit_t unit = ADC_UNIT_1;
+    if (vbat_on && (adc_oneshot_io_to_channel(pc->vbat, &unit, &vbat_ch) != ESP_OK || unit != ADC_UNIT_1)) {
+        ESP_LOGE(TAG, "GPIO%d can't read the battery", pc->vbat);
+        vbat_on = false;
+    }
     if (vbat_on) {
         adc_oneshot_unit_init_cfg_t uc = {.unit_id = ADC_UNIT_1};
         ESP_ERROR_CHECK(adc_oneshot_new_unit(&uc, &adc));
         adc_oneshot_chan_cfg_t cc = {.atten = ADC_ATTEN_DB_12, .bitwidth = ADC_BITWIDTH_12};
-        ESP_ERROR_CHECK(adc_oneshot_config_channel(adc, ADC_CHANNEL_3, &cc));
+        ESP_ERROR_CHECK(adc_oneshot_config_channel(adc, vbat_ch, &cc));
         adc_cali_curve_fitting_config_t cal = {
-            .unit_id = ADC_UNIT_1, .chan = ADC_CHANNEL_3, .atten = ADC_ATTEN_DB_12, .bitwidth = ADC_BITWIDTH_12,
+            .unit_id = ADC_UNIT_1, .chan = vbat_ch, .atten = ADC_ATTEN_DB_12, .bitwidth = ADC_BITWIDTH_12,
         };
         if (adc_cali_create_scheme_curve_fitting(&cal, &cali) != ESP_OK) {
             ESP_LOGW(TAG, "no ADC calibration in eFuse, battery reading is approximate");
@@ -221,8 +241,9 @@ void hw_init(const bot_cfg_t *cfg)
     }
 
     // status LED: 10 MHz ticks, WS2812 bit timing 0.3 / 0.9 us
+    if (!cfg->led_on) return;
     rmt_tx_channel_config_t tx = {
-        .gpio_num = PIN_LED, .clk_src = RMT_CLK_SRC_DEFAULT, .resolution_hz = 10000000,
+        .gpio_num = pc->led, .clk_src = RMT_CLK_SRC_DEFAULT, .resolution_hz = 10000000,
         .mem_block_symbols = 48, .trans_queue_depth = 2,
     };
     if (rmt_new_tx_channel(&tx, &led_ch) == ESP_OK) {

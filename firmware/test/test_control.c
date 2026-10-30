@@ -226,6 +226,57 @@ static void test_battery(void)
     CHECK(!c.drive_lock && !c.weapon_lock);
 }
 
+static void test_features(void)
+{
+    // lockouts off: low battery does nothing
+    reset();
+    cfg.safe.lockout = false;
+    ctl_input_t in = {0};
+    in.ax[AX_LY] = 127;
+    run(&in, 100);
+    ctl_arm(&c, &cfg, now);
+    c.vbat = 5.5f;
+    run(&in, 2500);
+    CHECK(c.armed && !c.weapon_lock && !c.drive_lock && c.motor[0] > 0);
+    // drive switched off
+    reset();
+    cfg.drive_on = false;
+    run(&in, 100);
+    CHECK(c.motor[0] == 0 && c.motor[1] == 0);
+
+    // pins: default board, then a clash with the battery input
+    bot_cfg_t p;
+    cfg_defaults(&p);
+    bool av[NUM_OUT];
+    cfg_out_avail(&p, av);
+    CHECK(av[0] && av[1] && !av[2] && av[3]);   // IO3 is the battery input
+    p.bsense = false;
+    cfg_out_avail(&p, av);
+    CHECK(av[2]);
+    p.out[3].type = OUT_ESC;
+    p.pins.out[3] = p.pins.out[0];               // two outputs on one pin: the later one loses
+    cfg_out_avail(&p, av);
+    CHECK(av[0] && !av[3]);
+    p.pins.out[1] = p.pins.ain1;                 // output on a motor pin
+    cfg_out_avail(&p, av);
+    CHECK(!av[1]);
+    p.drive_on = false;
+    cfg_out_avail(&p, av);
+    CHECK(av[1]);
+
+    // sanitize: bad pins go back to the board defaults, clashing motor pins reset
+    cfg_defaults(&p);
+    p.pins.vbat = 7;        // not an ADC pin
+    p.pins.led = 1;         // not on the XIAO
+    p.pins.bin2 = p.pins.ain1;
+    cfg_sanitize(&p);
+    CHECK(p.pins.vbat == 3 && p.pins.led == 9 && p.pins.bin2 == 7 && p.pins.ain1 == 4);
+    p.pins.ain1 = 2;
+    p.pins.ain2 = 8;        // moving the motors to free pins is fine
+    cfg_sanitize(&p);
+    CHECK(p.pins.ain1 == 2 && p.pins.ain2 == 8);
+}
+
 static void test_image(void)
 {
     CHECK(cfg_crc32((const uint8_t *)"123456789", 9) == 0xCBF43926u);
@@ -248,6 +299,7 @@ int main(void)
     test_drops();
     test_outputs();
     test_battery();
+    test_features();
     test_image();
     printf("%d checks, %d failed\n", checks, fails);
     return fails != 0;

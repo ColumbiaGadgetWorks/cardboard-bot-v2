@@ -98,7 +98,7 @@ void app_main(void)
 
     net_start(&g_cfg);
     web_start();
-    dns_start();
+    if (g_cfg.captive) dns_start();   // off: phones don't show "Sign in to network"
 
     // a new image that gets this far without crashing is kept; otherwise the bootloader rolls back
     int64_t t0 = esp_timer_get_time();

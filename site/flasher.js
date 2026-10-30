@@ -79,8 +79,130 @@ export function parseImage(img) {
 }
 window.cgwTest = { makeImage, parseImage, crc32, sanitize, pagesBase };
 
+// ------------------------------------------------------------------ settings form
+// Same as cfg_defaults() in firmware/main/config.c (JSON names from config_json.c)
+const DEFAULTS = {
+  name: "Robot", driver: "", ap: "", pw: "", ch: 0, src: "stable", srcUrl: "",
+  bsense: true, driveOn: true, ledOn: true, captive: true,
+  pins: { ain1: 4, ain2: 5, bin1: 6, bin2: 7, out: [10, 20, 3, 21], led: 9, vbat: 3 },
+  wifi: { ssid: "", pw: "" },
+  drive: { mode: 2, invL: false, invR: false, swap: false, revSteer: false, max: 100, slow: 50, slowBtn: 6,
+           turn: 70, spin: 100, expo: 30, dead: 8, ramp: 150, vcap: 6 },
+  out: [0, 1, 2, 3].map((i) => ({ type: i === 0 ? 1 : i === 1 ? 2 : 0, mode: 0, btn: i === 0 ? 5 : i === 1 ? 4 : 255,
+    axis: 5, min: i === 1 ? 500 : 1000, max: i === 1 ? 2500 : 2000, maxPct: 100, spin: 1000, rest: 0, fire: 90, speed: 0 })),
+  safe: { wpnCut: 300, fs: 1000, grace: 1000, drops: 3, lowWpn: 6.4, lowDrv: 6, lockout: true },
+};
+const XIAO_PINS = [[2, "D0"], [3, "D1"], [4, "D2"], [5, "D3"], [6, "D4"], [7, "D5"], [21, "D6"], [20, "D7"], [8, "D8"], [9, "D9"], [10, "D10"]];
+const BTN = ["A / ✕", "B / ○", "X / □", "Y / △", "LB / L1", "RB / R1", "LT / L2", "RT / R2", "Back / Share", "Start / Options",
+  "Left stick press", "Right stick press", "D-pad up", "D-pad down", "D-pad left", "D-pad right", "Home / PS"];
+const OUT_NAMES = ["Output 1", "Output 2", "Output 3", "Output 4"];
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function merge(a, b) {   // b's values over a, recursively (arrays element by element)
+  if (Array.isArray(a)) return a.map((v, i) => (b && i < b.length ? merge(v, b[i]) : clone(v)));
+  if (a && typeof a === "object") {
+    const r = {};
+    for (const k of Object.keys(a)) r[k] = merge(a[k], b ? b[k] : undefined);
+    if (b && typeof b === "object") for (const k of Object.keys(b)) if (!(k in a)) r[k] = clone(b[k]);
+    return r;
+  }
+  return b === undefined || b === null ? a : b;
+}
+function getK(o, k) { return k.split(".").reduce((a, p) => (a == null ? a : a[p]), o); }
+function setK(o, k, v) { const p = k.split("."); let a = o; for (let i = 0; i < p.length - 1; i++) a = a[p[i]]; a[p[p.length - 1]] = v; }
+
+// pins in use, and anything that clashes (firmware/main/config.c cfg_out_avail does the same on the robot)
+export function checkCfg(c) {
+  const errs = [], used = new Map();
+  const name = (g) => (XIAO_PINS.find((p) => p[0] === g) || [g, "GPIO" + g])[1];
+  const take = (g, what) => {
+    if (used.has(g)) errs.push(`${name(g)} is used for both ${used.get(g)} and ${what}`);
+    else used.set(g, what);
+  };
+  if (c.driveOn) [["ain1", "left motor IN1"], ["ain2", "left motor IN2"], ["bin1", "right motor IN3"], ["bin2", "right motor IN4"]]
+    .forEach(([k, w]) => take(c.pins[k], w));
+  if (c.ledOn) take(c.pins.led, "the status LED");
+  if (c.bsense) {
+    if (![2, 3, 4].includes(c.pins.vbat)) errs.push("The battery input must be D0, D1 or D2");
+    take(c.pins.vbat, "the battery input");
+  }
+  c.out.forEach((o, i) => { if (o.type) take(c.pins.out[i], OUT_NAMES[i]); });
+  if (c.pw && c.pw.length < 8) errs.push("The Wi-Fi password needs 8+ characters, or leave it blank");
+  return errs;
+}
+
+let adv = clone(DEFAULTS);   // the advanced settings shown in the form
+let formDirty = false;
+function buildAdvForm() {
+  document.querySelectorAll("select[data-pin]").forEach((s) => {
+    const pins = s.dataset.pin === "adc" ? XIAO_PINS.filter((p) => p[0] >= 2 && p[0] <= 4) : XIAO_PINS;
+    s.innerHTML = pins.map(([g, d]) => `<option value="${g}">${d} (GPIO${g})</option>`).join("");
+    s.dataset.n = "";
+  });
+  const btnOpts = `<option value="255">On-screen only</option>` + BTN.map((n, i) => `<option value="${i}">${n}</option>`).join("");
+  $("#outs").innerHTML = `<tr><th></th><th>Type</th><th>Mode</th><th>Gamepad button</th><th>Pulse min / max (µs)</th></tr>` +
+    [0, 1, 2, 3].map((i) => `<tr data-row="${i}"><td>${OUT_NAMES[i]}</td>
+      <td><select data-k="out.${i}.type" data-n><option value="0">Off</option><option value="1">ESC</option><option value="2">Servo</option></select></td>
+      <td><select data-k="out.${i}.mode" data-n><option value="0">Hold</option><option value="1">Toggle</option><option value="2">Variable</option></select></td>
+      <td><select data-k="out.${i}.btn" data-n>${btnOpts}</select></td>
+      <td><input type="number" min="400" max="2600" data-k="out.${i}.min"> <input type="number" min="400" max="2600" data-k="out.${i}.max"></td></tr>`).join("");
+}
+function fillAdv() {
+  document.querySelectorAll("#adv [data-k]").forEach((e) => {
+    const v = getK(adv, e.dataset.k);
+    if (v === undefined) return;
+    if (e.type === "checkbox") e.checked = !!v; else e.value = String(v);
+  });
+  advRefresh();
+}
+function readAdv() {
+  document.querySelectorAll("#adv [data-k]").forEach((e) => {
+    let v = e.type === "checkbox" ? e.checked : e.value;
+    if (e.type === "number" || e.dataset.n !== undefined) v = Number(v);
+    setK(adv, e.dataset.k, v);
+  });
+}
+function advRefresh() {
+  readAdv();
+  document.querySelectorAll("#adv tr[data-need]").forEach((r) => r.classList.toggle("off", !getK(adv, r.dataset.need)));
+  document.querySelectorAll("#adv tr[data-out]").forEach((r) => r.classList.toggle("off", !adv.out[+r.dataset.out].type));
+  document.querySelectorAll("#outs tr[data-row]").forEach((r) => r.classList.toggle("off", !adv.out[+r.dataset.row].type));
+  const errs = $("#custom").checked ? checkCfg(adv) : [];
+  $("#advErr").textContent = errs.join(". ");
+}
+buildAdvForm();
+fillAdv();
+$("#custom").addEventListener("change", () => { $("#adv").classList.toggle("hidden", !$("#custom").checked); advRefresh(); });
+$("#adv").addEventListener("input", () => { formDirty = true; advRefresh(); });
+$("#adv").addEventListener("change", (e) => {
+  // switching type: swap the pulse range to the new type's default if it's still the old type's
+  const m = (e.target.dataset.k || "").match(/^out\.(\d)\.type$/);
+  if (m) {
+    const row = document.querySelector(`#outs tr[data-row="${m[1]}"]`), [lo, hi] = row.querySelectorAll("input[type=number]");
+    const esc = e.target.value === "1", srv = e.target.value === "2";
+    if (esc && lo.value === "500" && hi.value === "2500") { lo.value = "1000"; hi.value = "2000"; }
+    if (srv && lo.value === "1000" && hi.value === "2000") { lo.value = "500"; hi.value = "2500"; }
+  }
+  advRefresh();
+});
+document.querySelector("#name").closest(".card").addEventListener("input", () => { formDirty = true; });
+$("#advReset").onclick = () => {
+  const keep = adv;
+  adv = clone(DEFAULTS);
+  ["name", "driver", "ap", "pw", "ch", "wifi", "src", "srcUrl"].forEach((k) => (adv[k] = keep[k]));
+  fillAdv();
+};
+
+Object.assign(window.cgwTest, { checkCfg, formToCfg: (b) => formToCfg(b), merge, DEFAULTS });
+
 function formToCfg(base) {
-  const c = Object.assign({}, base || {});
+  // only the fields on this page change; everything else on the robot is kept
+  const c = clone(base || {});
+  if ($("#custom").checked) {
+    Object.assign(c, merge(DEFAULTS, c));
+    readAdv();
+    document.querySelectorAll("#adv [data-k]").forEach((e) => setK(c, e.dataset.k, getK(adv, e.dataset.k)));
+  }
   c.name = $("#name").value.trim() || c.name || "Robot";
   c.driver = $("#driver").value.trim();
   c.ap = $("#ap").value.trim();
@@ -131,9 +253,14 @@ async function connect() {
   } catch (e) {
     deviceCfg = null;
   }
-  if (deviceCfg) {
+  if (formDirty) {
+    $("#cfgNote").textContent = deviceCfg ? "Read this robot's settings. What you typed here is kept; everything else on the robot stays as it was."
+      : "This robot has no saved settings yet; it starts with the defaults plus what you enter here.";
+  } else if (deviceCfg) {
     cfgToForm(deviceCfg);
-    $("#cfgNote").textContent = "Loaded this robot's current settings. Drive and output settings are kept.";
+    adv = merge(DEFAULTS, deviceCfg);
+    fillAdv();
+    $("#cfgNote").textContent = "Loaded this robot's current settings. Anything you don't change is kept.";
   } else {
     $("#cfgNote").textContent = "This robot has no saved settings yet; it starts with the defaults plus what you enter here.";
   }
@@ -176,7 +303,8 @@ async function run(kind) {
     if (kind === "install" || kind === "update") files = await firmwareFiles();
     if (kind === "install" || kind === "settings") {
       const c = formToCfg(deviceCfg);
-      if (c.pw && c.pw.length < 8) throw new Error("The Wi-Fi password needs 8+ characters, or leave it blank");
+      const errs = checkCfg(merge(DEFAULTS, c));
+      if (errs.length) throw new Error(errs.join(". "));
       files.push({ data: makeImage(c), address: BOTCFG_ADDR });
     }
     files.sort((a, b) => a.address - b.address);

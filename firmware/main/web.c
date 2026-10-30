@@ -130,11 +130,12 @@ static esp_err_t cmd_take(httpd_req_t *req, int fd, cJSON *m)
     return ws_send_text(req, "{\"t\":\"role\",\"role\":\"driver\"}");
 }
 
-// network settings only take effect after a restart
+// network, pin and fitted-hardware settings only take effect after a restart
 static bool needs_reboot(const bot_cfg_t *a, const bot_cfg_t *b)
 {
     return strcmp(a->ap, b->ap) || strcmp(a->pw, b->pw) || a->ch != b->ch || a->bsense != b->bsense ||
-           (strcmp(a->name, b->name) && !a->ap[0]);
+           a->drive_on != b->drive_on || a->led_on != b->led_on || a->captive != b->captive ||
+           memcmp(&a->pins, &b->pins, sizeof(a->pins)) || (strcmp(a->name, b->name) && !a->ap[0]);
 }
 
 static esp_err_t cmd_cfg(httpd_req_t *req, cJSON *m)
