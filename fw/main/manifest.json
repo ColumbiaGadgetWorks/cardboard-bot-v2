@@ -1,9 +1,9 @@
 {
  "name": "Cardboard Bot",
- "version": "de21859",
+ "version": "42d48c8",
  "ref": "main",
- "sha": "de21859276e6a671e687a8b9bf6307e6a6eb0f8b",
- "date": "2026-10-30T19:18:22+00:00",
+ "sha": "42d48c8b1e49409ad0c12253b530248e4a9c3c97",
+ "date": "2026-10-30T21:29:16+00:00",
  "chip": "ESP32-C3",
  "parts": [
   {

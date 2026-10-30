@@ -101,23 +101,25 @@ code{font-size:90%}
         Settings you don't change here are kept. <button class="alt small" id="advReset" type="button">Reset these to board defaults</button></p>
       <h3>Features</h3>
       <div class="feat">
-        <label class="check"><input type="checkbox" data-k="driveOn"> Motor driver (DRV8833) connected</label>
-        <label class="check"><input type="checkbox" data-k="bsense"> Battery voltage reading (pack ÷ 4 divider)</label>
-        <label class="check"><input type="checkbox" data-k="safe.lockout"> Low-battery lockouts (weapon below <input type="number" step="0.1" min="5" max="8" data-k="safe.lowWpn" class="num"> V, drive below <input type="number" step="0.1" min="5" max="8" data-k="safe.lowDrv" class="num"> V)</label>
+        <label class="check"><input type="checkbox" data-k="driveOn"> Motor drivers connected</label>
+        <label class="check"><input type="checkbox" data-k="bsense"> Battery voltage reading, divider ratio
+          <input type="number" step="0.1" min="2" max="12" data-k="vdiv" class="num"> (board: 6 = 100k / 20k; 4 = 300k / 100k)</label>
+        <label class="check">Battery <select data-k="cells" data-n><option value="0">Detect 2S / 3S</option><option value="2">2S</option><option value="3">3S</option></select></label>
+        <label class="check"><input type="checkbox" data-k="safe.lockout"> Low-battery lockouts (weapon below <input type="number" step="0.05" min="2.8" max="3.8" data-k="safe.lowWpn" class="num"> V, drive below <input type="number" step="0.05" min="2.8" max="3.8" data-k="safe.lowDrv" class="num"> V, per cell)</label>
         <label class="check"><input type="checkbox" data-k="ledOn"> Status LED (WS2812)</label>
         <label class="check"><input type="checkbox" data-k="captive"> "Sign in to network" pop-up on phones</label>
       </div>
       <h3>Pins</h3>
       <table class="pins">
         <tr><th>Connection</th><th>XIAO pin</th><th></th></tr>
-        <tr data-need="driveOn"><td>Left motor IN1</td><td><select data-k="pins.ain1" data-pin></select></td><td class="note">DRV8833 IN1</td></tr>
-        <tr data-need="driveOn"><td>Left motor IN2</td><td><select data-k="pins.ain2" data-pin></select></td><td class="note">DRV8833 IN2</td></tr>
-        <tr data-need="driveOn"><td>Right motor IN3</td><td><select data-k="pins.bin1" data-pin></select></td><td class="note">DRV8833 IN3</td></tr>
-        <tr data-need="driveOn"><td>Right motor IN4</td><td><select data-k="pins.bin2" data-pin></select></td><td class="note">DRV8833 IN4</td></tr>
+        <tr data-need="driveOn"><td>Left motor IN1</td><td><select data-k="pins.ain1" data-pin></select></td><td class="note">left driver IN1</td></tr>
+        <tr data-need="driveOn"><td>Left motor IN2</td><td><select data-k="pins.ain2" data-pin></select></td><td class="note">left driver IN2</td></tr>
+        <tr data-need="driveOn"><td>Right motor IN1</td><td><select data-k="pins.bin1" data-pin></select></td><td class="note">right driver IN1</td></tr>
+        <tr data-need="driveOn"><td>Right motor IN2</td><td><select data-k="pins.bin2" data-pin></select></td><td class="note">right driver IN2</td></tr>
         <tr data-out="0"><td>Output 1</td><td><select data-k="pins.out.0" data-pin></select></td><td class="note">board: OUT1</td></tr>
         <tr data-out="1"><td>Output 2</td><td><select data-k="pins.out.1" data-pin></select></td><td class="note">board: OUT2</td></tr>
-        <tr data-out="2"><td>Output 3</td><td><select data-k="pins.out.2" data-pin></select></td><td class="note">board: IO3</td></tr>
-        <tr data-out="3"><td>Output 4</td><td><select data-k="pins.out.3" data-pin></select></td><td class="note">board: IO21</td></tr>
+        <tr data-out="2"><td>Output 3</td><td><select data-k="pins.out.2" data-pin></select></td><td class="note">board: OUT3</td></tr>
+        <tr data-out="3"><td>Output 4</td><td><select data-k="pins.out.3" data-pin></select></td><td class="note">no header on the board</td></tr>
         <tr data-need="ledOn"><td>Status LED data</td><td><select data-k="pins.led" data-pin></select></td><td class="note">WS2812 DIN</td></tr>
         <tr data-need="bsense"><td>Battery input</td><td><select data-k="pins.vbat" data-pin="adc"></select></td><td class="note">D0, D1 or D2 only (analog)</td></tr>
       </table>
