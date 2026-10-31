@@ -185,7 +185,7 @@ $$("nav button").forEach(b=>b.onclick=()=>{$$("nav button").forEach(x=>x.classLi
 
 // ---------- connection
 function connect(){
-  ws=new WebSocket("wss://"+location.host+"/ws");ws.binaryType="arraybuffer";
+  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");ws.binaryType="arraybuffer";
   ws.onopen=()=>{send({t:"hello",id:myId});$("#hLink").textContent="linked";$("#hLink").className="pill ok"};
   ws.onclose=()=>{ws=null;$("#hLink").textContent="reconnecting";$("#hLink").className="pill bad";setTimeout(connect,500)};
   ws.onmessage=e=>{if(typeof e.data!=="string")return;let m;try{m=JSON.parse(e.data)}catch(x){return}on(m)};
@@ -330,6 +330,8 @@ $("#otaUp").onclick=()=>{
   x.onload=()=>{$("#otaMsg").textContent=x.status===200?"Done. The robot restarts; reconnect in a few seconds.":x.responseText};
   x.onerror=()=>{$("#otaMsg").textContent="Upload failed"};$("#otaMsg").textContent="Uploading…";x.send(f)};
 
+// Browsers only allow gamepads on secure pages; the robot serves plain http
+if(!window.isSecureContext)$("#hint").innerHTML="Gamepads are blocked on http pages. One-time fix in Chrome: open <b>chrome://flags/#unsafely-treat-insecure-origin-as-secure</b>, add <b>http://192.168.4.1</b>, Enable, Relaunch.";
 connect();
 </script>
 </body>

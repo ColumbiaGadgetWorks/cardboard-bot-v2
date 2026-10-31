@@ -12,13 +12,12 @@ CONFIG_FREERTOS_HZ=1000
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 
-# HTTPS + WebSocket server
-CONFIG_ESP_HTTPS_SERVER_ENABLE=y
+# HTTP + WebSocket server (plain HTTP on the robot's own Wi-Fi; HTTPS is only used to pull updates)
 CONFIG_HTTPD_WS_SUPPORT=y
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
 CONFIG_HTTPD_MAX_URI_LEN=256
 CONFIG_LWIP_MAX_SOCKETS=16
-# TLS buffers only while a record is in flight: several phones fit in RAM
+# TLS buffers (update downloads) only while a record is in flight
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
 CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
 CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y

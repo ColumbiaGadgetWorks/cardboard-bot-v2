@@ -16,4 +16,4 @@ Cardboard battlebots for Columbia Gadget Works, built on the Seeed XIAO ESP32-C3
 | [`site/`](site/) | Web flasher, published to GitHub Pages with every firmware build |
 
 **Flash a robot:** <https://columbiagadgetworks.github.io/cardboard-bot-v2/> (desktop Chrome or Edge, or Firefox 151+).
-**Drive it:** join the robot's Wi-Fi (`CGW-<name>`) and open **https://192.168.4.1** on the phone.
+**Drive it:** join the robot's Wi-Fi (`CGW-<name>`) and open **http://192.168.4.1** on the phone.

@@ -1,4 +1,4 @@
-// Phone <-> robot protocol (secure WebSocket at wss://192.168.4.1/ws)
+// Phone <-> robot protocol (WebSocket at ws://192.168.4.1/ws, plain HTTP on port 80)
 //
 // Phone -> robot, binary, about 50 per second from the driving phone (12 bytes):
 //   [0] 0x01  [1] sequence  [2..5] lx ly rx ry (int8, up/right positive)  [6..7] lt rt (uint8)
@@ -19,7 +19,6 @@
 #include "cJSON.h"
 #include "esp_app_desc.h"
 #include "esp_http_server.h"
-#include "esp_https_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_system.h"
@@ -32,12 +31,7 @@ static const char *TAG = "web";
 
 extern const uint8_t index_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t index_gz_end[] asm("_binary_index_html_gz_end");
-extern const uint8_t cert_start[] asm("_binary_servercert_pem_start");
-extern const uint8_t cert_end[] asm("_binary_servercert_pem_end");
-extern const uint8_t key_start[] asm("_binary_prvtkey_pem_start");
-extern const uint8_t key_end[] asm("_binary_prvtkey_pem_end");
-
-static httpd_handle_t https, http;
+static httpd_handle_t srv;
 static int driver_fd = -1;
 static char driver_id[24];   // the phone that drives; survives that phone reconnecting
 
@@ -63,7 +57,7 @@ static esp_err_t ws_send_json(httpd_req_t *req, cJSON *j)
 static void ws_send_fd(int fd, const char *s)   // from the server task only
 {
     httpd_ws_frame_t f = {.type = HTTPD_WS_TYPE_TEXT, .payload = (uint8_t *)s, .len = strlen(s)};
-    httpd_ws_send_frame_async(https, fd, &f);
+    httpd_ws_send_frame_async(srv, fd, &f);
 }
 
 static esp_err_t send_err(httpd_req_t *req, const char *msg)
@@ -294,13 +288,13 @@ static void broadcast_work(void *arg)
     bc_t *b = arg;
     size_t n = 8;
     int fds[8];
-    if (httpd_get_client_list(https, &n, fds) == ESP_OK) {
+    if (httpd_get_client_list(srv, &n, fds) == ESP_OK) {
         for (size_t i = 0; i < n; i++) {
-            if (httpd_ws_get_fd_info(https, fds[i]) != HTTPD_WS_CLIENT_WEBSOCKET) continue;
+            if (httpd_ws_get_fd_info(srv, fds[i]) != HTTPD_WS_CLIENT_WEBSOCKET) continue;
             // the status ends with the receiver's own role
             b->s[b->len - 2] = fds[i] == driver_fd ? '1' : '0';
             httpd_ws_frame_t f = {.type = HTTPD_WS_TYPE_TEXT, .payload = (uint8_t *)b->s, .len = b->len};
-            httpd_ws_send_frame_async(https, fds[i], &f);
+            httpd_ws_send_frame_async(srv, fds[i], &f);
         }
     }
     free(b);
@@ -308,7 +302,7 @@ static void broadcast_work(void *arg)
 
 void web_broadcast_status(void)
 {
-    if (!https) return;
+    if (!srv) return;
     cJSON *j = cJSON_CreateObject();
     cJSON_AddStringToObject(j, "t", "st");
     app_lock();
@@ -339,7 +333,7 @@ void web_broadcast_status(void)
     if (b) {
         b->len = len;
         memcpy(b->s, s, len + 1);
-        if (httpd_queue_work(https, broadcast_work, b) != ESP_OK) free(b);
+        if (httpd_queue_work(srv, broadcast_work, b) != ESP_OK) free(b);
     }
     free(s);
 }
@@ -412,81 +406,52 @@ static esp_err_t ota_handler(httpd_req_t *req)
     return httpd_resp_sendstr(req, "Update failed: not a valid firmware file");
 }
 
-// plain HTTP on port 80: what the phone's captive-portal check and typed addresses land on
-static const char LANDING[] =
-    "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
-    "<title>Cardboard Bot</title><style>body{font:18px system-ui,sans-serif;margin:24px;background:#f4ede1;color:#2b2118}"
-    "a.b{display:block;padding:16px;margin:16px 0;background:#c8402e;color:#fff;text-align:center;border-radius:10px;"
-    "text-decoration:none;font-weight:700}small{color:#6b5a48}</style></head><body><h2>Cardboard Bot</h2>"
-    "<p>Open the controller in <b>Chrome</b> or <b>Safari</b>. This sign-in pop-up can't run it.</p>"
-    // Android: an intent link leaves the captive-portal window and opens Chrome directly
-    "<a class=b href='intent://192.168.4.1/#Intent;scheme=https;package=com.android.chrome;end'>Open in Chrome</a>"
-    "<p><small>Not Android, or no Chrome? Open <b>https://192.168.4.1</b> in your browser.</small></p>"
-    "<p><small>The first time, the browser warns about the certificate: tap <i>Advanced</i>, then <i>Proceed</i>. "
-    "Club phones can <a href='/cgw-robot.crt'>install the certificate</a> once to skip the warning on every robot."
-    "</small></p></body></html>";
-
 // What iOS / macOS expect from captive.apple.com when there's no portal
 static const char APPLE_OK[] = "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>";
 
-static esp_err_t landing_handler(httpd_req_t *req)
+// Any other address (a phone's captive-portal check, or a typed URL): send it to the controller, so
+// Android's "Sign in to network" pop-up opens the controller directly.
+static esp_err_t captive_handler(httpd_req_t *req)
 {
-    httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    // iPhones: answer the captive check as "online". Their sign-in sheet can't open the controller and
-    // disconnects from the robot when closed, so it's better that it doesn't appear at all.
+    // iPhones: answer the captive check as "online". Their sign-in sheet disconnects from the robot
+    // when it's closed, so it's better that it doesn't appear; open 192.168.4.1 in Safari instead.
     char ua[96] = "";
     if (httpd_req_get_hdr_value_str(req, "User-Agent", ua, sizeof(ua)) != ESP_ERR_NOT_FOUND &&
-        strstr(ua, "CaptiveNetworkSupport"))
+        strstr(ua, "CaptiveNetworkSupport")) {
+        httpd_resp_set_type(req, "text/html");
         return httpd_resp_send(req, APPLE_OK, sizeof(APPLE_OK) - 1);
-    return httpd_resp_send(req, LANDING, sizeof(LANDING) - 1);
-}
-
-static esp_err_t cert_handler(httpd_req_t *req)
-{
-    httpd_resp_set_type(req, "application/x-x509-ca-cert");
-    return httpd_resp_send(req, (const char *)cert_start, cert_end - cert_start - 1);
+    }
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+    return httpd_resp_send(req, NULL, 0);
 }
 
 void web_start(void)
 {
-    httpd_ssl_config_t sc = HTTPD_SSL_CONFIG_DEFAULT();
-    sc.servercert = cert_start;
-    sc.servercert_len = cert_end - cert_start;
-    sc.prvtkey_pem = key_start;
-    sc.prvtkey_len = key_end - key_start;
-    sc.httpd.max_open_sockets = 6;
-    sc.httpd.max_uri_handlers = 8;
-    sc.httpd.lru_purge_enable = true;
-    sc.httpd.close_fn = on_close;
-    sc.httpd.recv_wait_timeout = 10;
-    sc.httpd.send_wait_timeout = 10;
-    sc.httpd.stack_size = 10240;
-    sc.httpd.ctrl_port = 32768;
-    if (httpd_ssl_start(&https, &sc) != ESP_OK) {
-        ESP_LOGE(TAG, "HTTPS server failed to start");
-        https = NULL;
-    } else {
-        httpd_uri_t u_index = {.uri = "/", .method = HTTP_GET, .handler = index_handler};
-        httpd_uri_t u_ws = {.uri = "/ws", .method = HTTP_GET, .handler = ws_handler, .is_websocket = true};
-        httpd_uri_t u_ota = {.uri = "/ota", .method = HTTP_POST, .handler = ota_handler};
-        httpd_uri_t u_fav = {.uri = "/favicon.ico", .method = HTTP_GET, .handler = nothing_handler};
-        httpd_register_uri_handler(https, &u_index);
-        httpd_register_uri_handler(https, &u_ws);
-        httpd_register_uri_handler(https, &u_ota);
-        httpd_register_uri_handler(https, &u_fav);
-    }
-
     httpd_config_t hc = HTTPD_DEFAULT_CONFIG();
     hc.server_port = 80;
-    hc.ctrl_port = 32769;
-    hc.max_open_sockets = 3;
+    hc.max_open_sockets = 7;
+    hc.max_uri_handlers = 8;
     hc.lru_purge_enable = true;
+    hc.close_fn = on_close;
+    hc.recv_wait_timeout = 10;
+    hc.send_wait_timeout = 10;
+    hc.stack_size = 6144;
     hc.uri_match_fn = httpd_uri_match_wildcard;
-    if (httpd_start(&http, &hc) == ESP_OK) {
-        httpd_uri_t u_cert = {.uri = "/cgw-robot.crt", .method = HTTP_GET, .handler = cert_handler};
-        httpd_uri_t u_any = {.uri = "/*", .method = HTTP_GET, .handler = landing_handler};
-        httpd_register_uri_handler(http, &u_cert);
-        httpd_register_uri_handler(http, &u_any);
+    if (httpd_start(&srv, &hc) != ESP_OK) {
+        ESP_LOGE(TAG, "HTTP server failed to start");
+        srv = NULL;
+        return;
     }
+    httpd_uri_t u_index = {.uri = "/", .method = HTTP_GET, .handler = index_handler};
+    httpd_uri_t u_ws = {.uri = "/ws", .method = HTTP_GET, .handler = ws_handler, .is_websocket = true};
+    httpd_uri_t u_ota = {.uri = "/ota", .method = HTTP_POST, .handler = ota_handler};
+    httpd_uri_t u_fav = {.uri = "/favicon.ico", .method = HTTP_GET, .handler = nothing_handler};
+    httpd_uri_t u_any = {.uri = "/*", .method = HTTP_GET, .handler = captive_handler};   // last: catch-all
+    httpd_register_uri_handler(srv, &u_index);
+    httpd_register_uri_handler(srv, &u_ws);
+    httpd_register_uri_handler(srv, &u_ota);
+    httpd_register_uri_handler(srv, &u_fav);
+    httpd_register_uri_handler(srv, &u_any);
 }

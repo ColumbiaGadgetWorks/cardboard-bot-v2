@@ -4,7 +4,7 @@ ESP-IDF 5.3 firmware for the Seeed XIAO ESP32-C3 on the CGW main board (`hardwar
 
 - **Install it** from the web flasher: <https://columbiagadgetworks.github.io/cardboard-bot-v2/>
   (desktop Chrome or Edge, or Firefox 151+).
-- **Drive:** join the robot's Wi-Fi (`CGW-<name>`), then open **https://192.168.4.1** in Chrome or
+- **Drive:** join the robot's Wi-Fi (`CGW-<name>`), then open **http://192.168.4.1** in Chrome or
   Safari on the phone.
 
 ## What it does
@@ -12,7 +12,7 @@ ESP-IDF 5.3 firmware for the Seeed XIAO ESP32-C3 on the CGW main board (`hardwar
 | Part | Details |
 |---|---|
 | Wi-Fi | Robot hosts its own access point. At power-on it scans channels 1, 6 and 11 for about 0.5 s and takes the quietest. Other `CGW-` robots count three times as much as other networks. After a brownout reset it reuses the last channel. A fixed channel can be set. |
-| Phone page | Served over HTTPS (the browser Gamepad API needs a secure page) with a secure WebSocket at `/ws`. It has touch sticks, gamepad input, ARM, fire buttons, settings, diagnostics and updates. Plain HTTP and DNS answer everything with a landing page that links to `https://192.168.4.1`. |
+| Phone page | Plain HTTP on port 80 with a WebSocket at `/ws`. It has touch sticks, gamepad input, ARM, fire buttons, settings, diagnostics and updates. DNS answers every name with the robot and any other address redirects to the controller, so Android's "Sign in to network" pop-up opens it directly (iPhones get no pop-up: open 192.168.4.1 in Safari). Browsers block gamepads on http pages: in Chrome, add `http://192.168.4.1` once under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. |
 | Driver | The first phone after power-on drives, and the same phone gets control back when it reconnects. Other phones watch until they take control (with the Wi-Fi password, if one is set). |
 | Drive | Two DRV8870s on the rev B board (or a DRV8833 module on a prototype), slow decay, 20 kHz. Tank, arcade (one stick) or split arcade. Settings: deadzone, expo, turn rate, ramp, extra ramp when spinning, slow mode and invert/swap. A motor voltage cap (default 6 V) scales the PWM to the live pack voltage. |
 | Outputs | OUT1, OUT2, IO21 and IO3 (IO3 only when JP1 is cut). Each is an ESC (hold / toggle / variable, spin-up ramp, max %) or a servo (hold / toggle / position, rest and fire angles, speed). A second ESC starts 300 ms after the first. |
@@ -96,9 +96,8 @@ In the flasher, pick **Custom repo / branch** and enter `owner/repo` and the bra
 | `main/control.c` | Mixing, outputs, arm / failsafe / battery rules (plain C, tested on a PC) |
 | `main/hw.c` | LEDC motor and servo PWM, battery ADC, WS2812 over RMT |
 | `main/net.c` | Access point, channel pick, club Wi-Fi |
-| `main/web.c`, `main/dns.c` | HTTPS / WebSocket server, captive landing page and DNS |
+| `main/web.c`, `main/dns.c` | HTTP / WebSocket server, captive redirect and DNS |
 | `main/ota.c` | Download updates |
 | `main/store.c`, `main/config*.c` | Settings and diagnostics storage |
 | `main/www/index.html` | Phone page (gzipped into the firmware at build time) |
-| `main/certs/` | The shared HTTPS certificate (see its README) |
 | `partitions.csv` | nvs, otadata, botcfg, phy, two 1.875 MB app slots |
