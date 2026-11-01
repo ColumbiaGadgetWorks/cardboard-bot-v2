@@ -356,12 +356,12 @@ def main():
         place("power:PWR_FLAG", f"#FLG{i + 1:02d}", "PWR_FLAG", "", snap(fx + i * 25.4), snap(fy), {"1": net})
 
     notes = [
-        "Cardboard Bot v2 main board  -  rev A  -  Columbia Gadget Works",
+        "Cardboard Bot v2 main board  -  rev B  -  Columbia Gadget Works",
         "Generated from hardware/gen/circuit.py (do not hand-edit; edit circuit.py and regenerate).",
         "All connections are made by net labels at pin ends.",
-        "XIAO pins: D0 SDA(GPIO2) D1 IO3 D2-D5 DRV8833 AIN1/AIN2/BIN1/BIN2 D6 IO21 D7 OUT2(GPIO20) D8 SCL(GPIO8) D9 LED(GPIO9) D10 OUT1(GPIO10)",
-        "IP2320 per INJOINIC V1.00 datasheet fig. 5; HY2213 per HYCON DS-HY2213-V05 P-MOSFET example; clip per MYOUNG WD-CP-0056.",
-        "Battery sense: VSYS/4 on GPIO3 through bridged jumper JP1 (cut JP1 to use IO3 as plain GPIO).",
+        "Power: 2S or 3S LiPo on J1. Everything on VSYS is rated for 3S (12.6 V) with margin; SMAJ13A clamps spikes at about 21 V.",
+        "XIAO pins: D0 SDA(GPIO2) D1 VBAT/6(GPIO3) D2-D3 left DRV8870 IN1/IN2 D4-D5 right DRV8870 IN1/IN2 D6 OUT3(GPIO21) D7 OUT2(GPIO20) D8 SCL(GPIO8) D9 LED(GPIO9) D10 OUT1(GPIO10)",
+        "10k pull-downs on every motor input and output keep motors and ESCs off while the ESP32 boots.",
     ]
     for i, n in enumerate(notes):
         texts.append(f'  (text "{esc(n)}" (at 25.4 {535 + i * 5} 0) (effects (font (size 2 2)) (justify left bottom)) (uuid {uid()}))')
@@ -370,7 +370,7 @@ def main():
     sch = f'''(kicad_sch (version 20230121) (generator cgw_gen)
   (uuid {root})
   (paper "A1")
-  (title_block (title "Cardboard Bot v2 main board") (date "2026-10-27") (rev "A") (company "Columbia Gadget Works"))
+  (title_block (title "Cardboard Bot v2 main board") (date "2026-10-30") (rev "B") (company "Columbia Gadget Works"))
   (lib_symbols
 {libsyms}
   )

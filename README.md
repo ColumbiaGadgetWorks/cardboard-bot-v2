@@ -6,12 +6,12 @@ Cardboard battlebots for Columbia Gadget Works, built on the Seeed XIAO ESP32-C3
   with an optional Bluetooth gamepad (DS4 and others) through the browser's Gamepad API.
 - Firmware is flashed from a browser-based web flasher on GitHub Pages; updates go over the
   robot's own AP.
-- The board runs on 2 × 18650 cells, charges them over USB-C with balancing, drives two
-  gearmotors, and has four 3-pin outputs for ESCs or servos.
+- The board runs from a 2S or 3S LiPo on a screw terminal, drives two gearmotors through two
+  DRV8870s, and has three 3-pin outputs for ESCs or servos (two weapon ESCs by default).
 
 | Folder | Contents |
 |---|---|
-| [`hardware/`](hardware/) | KiCad 7 main board, rev A: schematic, PCB, JLCPCB fab files and the generator scripts |
+| [`hardware/`](hardware/) | KiCad 7 main board, rev B (2S/3S LiPo, 60 × 46 mm): schematic, PCB, JLCPCB fab files and the generator scripts |
 | [`firmware/`](firmware/) | ESP-IDF firmware for the XIAO ESP32-C3, including the phone controller page |
 | [`site/`](site/) | Web flasher, published to GitHub Pages with every firmware build |
 
