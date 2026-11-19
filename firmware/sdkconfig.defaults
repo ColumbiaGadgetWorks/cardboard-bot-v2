@@ -12,7 +12,7 @@ CONFIG_FREERTOS_HZ=1000
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 
-# HTTP + WebSocket server (plain HTTP on the robot's own Wi-Fi; HTTPS is only used to pull updates)
+# HTTP + WebSocket server (plain HTTP; HTTPS is only used to pull updates)
 CONFIG_HTTPD_WS_SUPPORT=y
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
 CONFIG_HTTPD_MAX_URI_LEN=256

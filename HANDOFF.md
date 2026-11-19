@@ -32,7 +32,7 @@ Notes for the next agent. Read `README.md`, `hardware/README.md`, `firmware/READ
    - only 2 mounting holes
    - DRV8870 drops out below about 6.5 V on 2S
 4. **Old branches:** `firmware`, `flasher-options` and `hardware` are merged but not deleted (deleting was blocked here).
-5. **Hardware bring-up:** flash a board; check the LED goes white then blue; on the phone join `CGW-<name>` and open http://192.168.4.1; test drive with the wheels up; test the ESCs with the weapon removed; test failsafe by turning off phone Wi-Fi.
+5. **Hardware bring-up:** flash a board; check the LED goes white then blue; set the Wi-Fi in the flasher, then open http://adambot.local from a phone on that Wi-Fi; test drive with the wheels up; test the ESCs with the weapon removed; test failsafe by turning off phone Wi-Fi.
 
 ## Owner's prototype (for testing before the PCB)
 - Parts: XIAO ESP32-C3, a DRV8833 breakout (WWZMDiB, J1 jumper left bridged), 2 ESCs, a 2S LiPo.

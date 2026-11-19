@@ -1,4 +1,4 @@
-// Phone <-> robot protocol (WebSocket at ws://192.168.4.1/ws, plain HTTP on port 80)
+// Phone <-> robot protocol (WebSocket at ws://<host>.local/ws, plain HTTP on port 80)
 //
 // Phone -> robot, binary, about 50 per second from the driving phone (12 bytes):
 //   [0] 0x01  [1] sequence  [2..5] lx ly rx ry (int8, up/right positive)  [6..7] lt rt (uint8)
@@ -37,6 +37,15 @@ static char driver_id[24];   // the phone that drives; survives that phone recon
 
 static uint32_t now_ms(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
 
+static int ws_clients(void)   // from the server task only
+{
+    size_t n = 8;
+    int fds[8], k = 0;
+    if (httpd_get_client_list(srv, &n, fds) != ESP_OK) return 0;
+    for (size_t i = 0; i < n; i++) k += httpd_ws_get_fd_info(srv, fds[i]) == HTTPD_WS_CLIENT_WEBSOCKET;
+    return k;
+}
+
 // ---------------------------------------------------------------- helpers
 static esp_err_t ws_send_text(httpd_req_t *req, const char *s)
 {
@@ -57,7 +66,7 @@ static esp_err_t ws_send_json(httpd_req_t *req, cJSON *j)
 static void ws_send_fd(int fd, const char *s)   // from the server task only
 {
     httpd_ws_frame_t f = {.type = HTTPD_WS_TYPE_TEXT, .payload = (uint8_t *)s, .len = strlen(s)};
-    httpd_ws_send_frame_async(srv, fd, &f);
+    if (httpd_ws_send_frame_async(srv, fd, &f) != ESP_OK) httpd_sess_trigger_close(srv, fd);
 }
 
 static esp_err_t send_err(httpd_req_t *req, const char *msg)
@@ -93,7 +102,7 @@ static esp_err_t cmd_hello(httpd_req_t *req, int fd, cJSON *m)
     cJSON_AddStringToObject(j, "role", fd == driver_fd ? "driver" : "viewer");
     cJSON_AddStringToObject(j, "ver", app_version());
     cJSON_AddStringToObject(j, "ssid", net_ssid());
-    cJSON_AddNumberToObject(j, "ch", net_channel());
+    cJSON_AddStringToObject(j, "host", net_host());
     app_lock();
     cJSON_AddBoolToObject(j, "pwSet", g_cfg.pw[0] != 0);
     char *cs = cfg_to_json(&g_cfg);
@@ -101,7 +110,7 @@ static esp_err_t cmd_hello(httpd_req_t *req, int fd, cJSON *m)
     cJSON *cj = cs ? cJSON_Parse(cs) : NULL;
     free(cs);
     if (cj) {
-        // the AP and club Wi-Fi passwords go only to the driving phone
+        // the control and Wi-Fi passwords go only to the driving phone
         if (fd != driver_fd) {
             cJSON_ReplaceItemInObject(cj, "pw", cJSON_CreateString(""));
             cJSON *w = cJSON_GetObjectItem(cj, "wifi");
@@ -127,9 +136,9 @@ static esp_err_t cmd_take(httpd_req_t *req, int fd, cJSON *m)
 // network, pin and fitted-hardware settings only take effect after a restart
 static bool needs_reboot(const bot_cfg_t *a, const bot_cfg_t *b)
 {
-    return strcmp(a->ap, b->ap) || strcmp(a->pw, b->pw) || a->ch != b->ch || a->bsense != b->bsense ||
-           a->drive_on != b->drive_on || a->led_on != b->led_on || a->captive != b->captive ||
-           memcmp(&a->pins, &b->pins, sizeof(a->pins)) || (strcmp(a->name, b->name) && !a->ap[0]);
+    return strcmp(a->host, b->host) || strcmp(a->wifi_ssid, b->wifi_ssid) || strcmp(a->wifi_pw, b->wifi_pw) ||
+           a->bsense != b->bsense || a->drive_on != b->drive_on || a->led_on != b->led_on ||
+           memcmp(&a->pins, &b->pins, sizeof(a->pins));
 }
 
 static esp_err_t cmd_cfg(httpd_req_t *req, cJSON *m)
@@ -185,9 +194,15 @@ static esp_err_t cmd_diag(httpd_req_t *req)
     cJSON_AddNumberToObject(j, "vmin", g_diag.vmin);
     app_unlock();
     cJSON_AddNumberToObject(j, "rssi", net_rssi());
-    cJSON_AddNumberToObject(j, "clients", net_clients());
+    cJSON_AddNumberToObject(j, "clients", ws_clients());
     cJSON_AddNumberToObject(j, "ch", net_channel());
     cJSON_AddStringToObject(j, "ssid", net_ssid());
+    cJSON_AddStringToObject(j, "host", net_host());
+    char ip[16];
+    net_ip(ip, sizeof(ip));
+    cJSON_AddStringToObject(j, "ip", ip);
+    cJSON_AddNumberToObject(j, "drops", net_drops());
+    cJSON_AddNumberToObject(j, "why", net_last_reason());
     cJSON_AddNumberToObject(j, "up", now_ms() / 1000);
     cJSON_AddNumberToObject(j, "heap", esp_get_free_heap_size());
     cJSON_AddNumberToObject(j, "heapMin", esp_get_minimum_free_heap_size());
@@ -294,7 +309,8 @@ static void broadcast_work(void *arg)
             // the status ends with the receiver's own role
             b->s[b->len - 2] = fds[i] == driver_fd ? '1' : '0';
             httpd_ws_frame_t f = {.type = HTTPD_WS_TYPE_TEXT, .payload = (uint8_t *)b->s, .len = b->len};
-            httpd_ws_send_frame_async(srv, fds[i], &f);
+            // a phone that stopped answering: close it rather than keep stalling the server on it
+            if (httpd_ws_send_frame_async(srv, fds[i], &f) != ESP_OK) httpd_sess_trigger_close(srv, fds[i]);
         }
     }
     free(b);
@@ -377,11 +393,12 @@ static esp_err_t ota_handler(httpd_req_t *req)
         return httpd_resp_sendstr(req, "No update slot");
     }
     char *buf = malloc(4096);
-    int total = req->content_len, got = 0;
+    int total = req->content_len, got = 0, waits = 0;
     bool ok = buf != NULL;
     while (ok && got < total) {
         int r = httpd_req_recv(req, buf, 4096);
-        if (r == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        // the phone went quiet mid-upload: give up rather than hold the server (and the robot) for ever
+        if (r == HTTPD_SOCK_ERR_TIMEOUT && ++waits < 3) continue;
         if (r <= 0) {
             ok = false;
             break;
@@ -389,6 +406,7 @@ static esp_err_t ota_handler(httpd_req_t *req)
         if (got == 0 && (uint8_t)buf[0] != 0xE9) ok = false;   // not an ESP32 app image
         if (ok && esp_ota_write(h, buf, r) != ESP_OK) ok = false;
         got += r;
+        waits = 0;
         char st[32];
         snprintf(st, sizeof(st), "Uploading %d%%", (int)(100LL * got / (total ? total : 1)));
         ota_set_status(st);
@@ -406,24 +424,11 @@ static esp_err_t ota_handler(httpd_req_t *req)
     return httpd_resp_sendstr(req, "Update failed: not a valid firmware file");
 }
 
-// What iOS / macOS expect from captive.apple.com when there's no portal
-static const char APPLE_OK[] = "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>";
-
-// Any other address (a phone's captive-portal check, or a typed URL): send it to the controller, so
-// Android's "Sign in to network" pop-up opens the controller directly.
-static esp_err_t captive_handler(httpd_req_t *req)
+// Any other address: send it to the controller
+static esp_err_t other_handler(httpd_req_t *req)
 {
-    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    // iPhones: answer the captive check as "online". Their sign-in sheet disconnects from the robot
-    // when it's closed, so it's better that it doesn't appear; open 192.168.4.1 in Safari instead.
-    char ua[96] = "";
-    if (httpd_req_get_hdr_value_str(req, "User-Agent", ua, sizeof(ua)) != ESP_ERR_NOT_FOUND &&
-        strstr(ua, "CaptiveNetworkSupport")) {
-        httpd_resp_set_type(req, "text/html");
-        return httpd_resp_send(req, APPLE_OK, sizeof(APPLE_OK) - 1);
-    }
     httpd_resp_set_status(req, "302 Found");
-    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+    httpd_resp_set_hdr(req, "Location", "/");
     return httpd_resp_send(req, NULL, 0);
 }
 
@@ -436,7 +441,14 @@ void web_start(void)
     hc.lru_purge_enable = true;
     hc.close_fn = on_close;
     hc.recv_wait_timeout = 10;
-    hc.send_wait_timeout = 10;
+    // one server task serves every phone: a send to a phone that's gone must not stall the
+    // driving phone's packets for long (that alone trips the failsafe)
+    hc.send_wait_timeout = 2;
+    // TCP keep-alive finds phones that vanished without closing (walked out of range, Wi-Fi off)
+    hc.keep_alive_enable = true;
+    hc.keep_alive_idle = 5;
+    hc.keep_alive_interval = 2;
+    hc.keep_alive_count = 3;
     hc.stack_size = 6144;
     hc.uri_match_fn = httpd_uri_match_wildcard;
     if (httpd_start(&srv, &hc) != ESP_OK) {
@@ -448,7 +460,7 @@ void web_start(void)
     httpd_uri_t u_ws = {.uri = "/ws", .method = HTTP_GET, .handler = ws_handler, .is_websocket = true};
     httpd_uri_t u_ota = {.uri = "/ota", .method = HTTP_POST, .handler = ota_handler};
     httpd_uri_t u_fav = {.uri = "/favicon.ico", .method = HTTP_GET, .handler = nothing_handler};
-    httpd_uri_t u_any = {.uri = "/*", .method = HTTP_GET, .handler = captive_handler};   // last: catch-all
+    httpd_uri_t u_any = {.uri = "/*", .method = HTTP_GET, .handler = other_handler};   // last: catch-all
     httpd_register_uri_handler(srv, &u_index);
     httpd_register_uri_handler(srv, &u_ws);
     httpd_register_uri_handler(srv, &u_ota);

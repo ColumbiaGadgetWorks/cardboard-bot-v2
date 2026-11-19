@@ -2,10 +2,10 @@
 
 Cardboard battlebots for Columbia Gadget Works, built on the Seeed XIAO ESP32-C3.
 
-- Each robot hosts its own Wi-Fi access point. You drive it from a phone browser,
-  with an optional Bluetooth gamepad (DS4 and others) through the browser's Gamepad API.
-- Firmware is flashed from a browser-based web flasher on GitHub Pages; updates go over the
-  robot's own AP.
+- Each robot joins a Wi-Fi network and answers at `http://adambot.local`. You drive it from a phone
+  browser on the same Wi-Fi, with an optional Bluetooth gamepad (DS4 and others) through the browser's Gamepad API.
+- Firmware is flashed from a browser-based web flasher on GitHub Pages; after that it updates
+  itself over Wi-Fi.
 - The board runs from a 2S or 3S LiPo on a screw terminal, drives two gearmotors through two
   DRV8870s, and has three 3-pin outputs for ESCs or servos (two weapon ESCs by default).
 
@@ -16,4 +16,4 @@ Cardboard battlebots for Columbia Gadget Works, built on the Seeed XIAO ESP32-C3
 | [`site/`](site/) | Web flasher, published to GitHub Pages with every firmware build |
 
 **Flash a robot:** <https://columbiagadgetworks.github.io/cardboard-bot-v2/> (desktop Chrome or Edge, or Firefox 151+).
-**Drive it:** join the robot's Wi-Fi (`CGW-<name>`) and open **http://192.168.4.1** on the phone.
+**Drive it:** on the same Wi-Fi as the robot, open **http://adambot.local** (or the address name set for it).

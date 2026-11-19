@@ -75,8 +75,8 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
   </div>
   <div class="stick" id="stR"><div class="base"><div class="knob"></div></div><div class="lbl" id="lblR">steer</div></div>
   <div id="viewer"><div class="card" style="text-align:center">
-    <h3>Someone else is driving</h3><p class="small">You can watch. To drive, take control<span id="pwHint"> with the robot's Wi-Fi password</span>.</p>
-    <p class="row" style="justify-content:center"><input id="takePw" type="password" placeholder="Wi-Fi password"><button class="btn" id="take">Take control</button></p>
+    <h3>Someone else is driving</h3><p class="small">You can watch. To drive, take control<span id="pwHint"> with the robot's control password</span>.</p>
+    <p class="row" style="justify-content:center"><input id="takePw" type="password" placeholder="Control password"><button class="btn" id="take">Take control</button></p>
   </div></div>
 </section>
 
@@ -84,9 +84,13 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
   <div class="card"><h3>Robot</h3>
     <label>Robot name <input data-k="name" maxlength="23"></label>
     <label>Driver name <input data-k="driver" maxlength="23"></label>
-    <label>Wi-Fi name (blank = CGW-robot name) <input data-k="ap" maxlength="32"></label>
-    <label>Wi-Fi password (blank = open, else 8+) <input data-k="pw" type="password" maxlength="63"></label>
-    <label>Wi-Fi channel <select data-k="ch" data-n><option value="0">Auto (quietest)</option><option>1</option><option>6</option><option>11</option></select></label>
+    <label>Control password (blank = anyone can take over) <input data-k="pw" type="password" maxlength="63"></label>
+  </div>
+  <div class="card"><h3>Network (restart to apply)</h3>
+    <label>Wi-Fi name (2.4 GHz) <input data-k="wifi.ssid" maxlength="32"></label>
+    <label>Wi-Fi password <input data-k="wifi.pw" type="password" maxlength="63"></label>
+    <label>Address: http://<i>name</i>.local <input data-k="host" maxlength="31"></label>
+    <p class="small">If the robot can't join (the light double-blinks cyan), fix the Wi-Fi in the web flasher over USB.</p>
   </div>
   <div class="card"><h3>Hardware (restart to apply)</h3>
     <label>Motor drivers connected <input type="checkbox" data-k="driveOn"></label>
@@ -95,7 +99,6 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
     <label>Battery <select data-k="cells" data-n><option value="0">Detect 2S / 3S</option><option value="2">2S</option><option value="3">3S</option></select></label>
     <label>Low-battery lockouts <input type="checkbox" data-k="safe.lockout"></label>
     <label>Status LED <input type="checkbox" data-k="ledOn"></label>
-    <label>"Sign in to network" pop-up <input type="checkbox" data-k="captive"></label>
     <label>Left motor IN1 <select data-k="pins.ain1" data-n data-pin></select></label>
     <label>Left motor IN2 <select data-k="pins.ain2" data-n data-pin></select></label>
     <label>Right motor IN1 <select data-k="pins.bin1" data-n data-pin></select></label>
@@ -136,8 +139,6 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
   <div class="card"><h3>Updates</h3>
     <label>Firmware source <select data-k="src"><option value="stable">Stable</option><option value="beta">Beta</option><option value="custom">Custom URL</option></select></label>
     <label>Custom firmware folder URL <input data-k="srcUrl" placeholder="https://you.github.io/repo/fw/branch/"></label>
-    <label>Club Wi-Fi name <input data-k="wifi.ssid"></label>
-    <label>Club Wi-Fi password <input data-k="wifi.pw" type="password"></label>
   </div>
   <p class="row"><button class="btn" id="save">Save settings</button><button class="btn alt" id="reboot" hidden>Restart robot</button></p>
 </section>
@@ -148,7 +149,7 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
     <tr><td>Lowest since power-on</td><td id="dMin">--</td></tr></table>
     <p class="small">The board measures the pack, not each cell. Charge state: watch the red LED by the USB-C port (on = charging, off = full).</p></div>
   <div class="card"><h3>Link</h3><table>
-    <tr><td>Signal (RSSI)</td><td id="dR">--</td></tr><tr><td>Wi-Fi</td><td id="dS">--</td></tr><tr><td>Phones connected</td><td id="dN">--</td></tr></table></div>
+    <tr><td>Signal (RSSI)</td><td id="dR">--</td></tr><tr><td>Wi-Fi</td><td id="dS">--</td></tr><tr><td>Address</td><td id="dIp">--</td></tr><tr><td>Wi-Fi drops since power-on</td><td id="dDrop">--</td></tr><tr><td>Phones connected</td><td id="dN">--</td></tr></table></div>
   <div class="card"><h3>Robot</h3><table>
     <tr><td>Firmware</td><td id="dVer">--</td></tr><tr><td>Running from</td><td id="dSlot">--</td></tr><tr><td>Up for</td><td id="dUp">--</td></tr>
     <tr><td>Free memory</td><td id="dHeap">--</td></tr><tr><td>Last restarts (newest first)</td><td id="dRst">--</td></tr>
@@ -159,7 +160,7 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
   <div class="card"><h3>Firmware</h3><p>Running <b id="uVer">--</b>.</p>
     <p class="small">Updates are blocked while armed. If a new version fails to start, the robot goes back to this one by itself.</p></div>
   <div class="card"><h3>From the internet</h3>
-    <p class="small">The robot joins the club Wi-Fi (set it under Settings → Updates) and downloads <span id="uSrc">--</span>. Your phone disconnects while it does; reconnect when the light stops flashing white.</p>
+    <p class="small">The robot downloads <span id="uSrc">--</span> over its Wi-Fi, then restarts. This page reconnects by itself.</p>
     <button class="btn" id="otaPull">Update from internet</button></div>
   <div class="card"><h3>From a file</h3>
     <p class="small">Pick an <code>app.bin</code> from the web flasher's firmware page.</p>
@@ -174,7 +175,7 @@ table{border-collapse:collapse}td{padding:3px 10px 3px 0}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const BTN=["A / ✕","B / ○","X / □","Y / △","LB / L1","RB / R1","LT / L2","RT / R2","Back / Share","Start / Options","Left stick","Right stick","D-pad up","D-pad down","D-pad left","D-pad right","Home / PS"];
 const AX=["Left stick X","Left stick up","Right stick X","Right stick up","LT / L2","RT / R2"];
-let ws=null, role="viewer", cfg=null, st={}, ver="", rebootNeeded=false;
+let ws=null, role="viewer", cfg=null, st={}, ver="", rebootNeeded=false, lastMsg=0;
 let myId; try{myId=localStorage.getItem("cgwId")}catch(e){}
 if(!myId){myId=[...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,"0")).join("");try{localStorage.setItem("cgwId",myId)}catch(e){}}
 function toast(t,ms=2500){const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",ms)}
@@ -184,17 +185,23 @@ function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 $$("nav button").forEach(b=>b.onclick=()=>{$$("nav button").forEach(x=>x.classList.toggle("on",x===b));$$("main section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));if(b.dataset.t==="diag")send({t:"diag"});if(b.dataset.t==="settings")fillForm()});
 
 // ---------- connection
+function lost(){$("#hLink").textContent="reconnecting";$("#hLink").className="pill bad"}
 function connect(){
-  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");ws.binaryType="arraybuffer";
-  ws.onopen=()=>{send({t:"hello",id:myId});$("#hLink").textContent="linked";$("#hLink").className="pill ok"};
-  ws.onclose=()=>{ws=null;$("#hLink").textContent="reconnecting";$("#hLink").className="pill bad";setTimeout(connect,500)};
-  ws.onmessage=e=>{if(typeof e.data!=="string")return;let m;try{m=JSON.parse(e.data)}catch(x){return}on(m)};
+  const w=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");w.binaryType="arraybuffer";ws=w;lastMsg=Date.now();
+  w.onopen=()=>{send({t:"hello",id:myId});$("#hLink").textContent="linked";$("#hLink").className="pill ok"};
+  w.onclose=()=>{if(ws!==w)return;ws=null;lost();setTimeout(connect,500)};
+  w.onmessage=e=>{lastMsg=Date.now();if(typeof e.data!=="string")return;let m;try{m=JSON.parse(e.data)}catch(x){return}on(m)};
 }
+// The robot sends status 5 times a second. Silence means a dead link that the browser may not notice
+// for a long time (Wi-Fi dropped, phone slept): throw the socket away and open a new one.
+function drop(){const w=ws;ws=null;w.onclose=w.onmessage=w.onopen=null;try{w.close()}catch(e){}lost();setTimeout(connect,300)}
+setInterval(()=>{if(ws&&Date.now()-lastMsg>(ws.readyState===1?2500:5000))drop()},500);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ws&&Date.now()-lastMsg>1000)drop()});
 function on(m){
   if(m.t==="hello"){role=m.role;cfg=m.cfg;ver=m.ver;$("#uVer").textContent=ver;$("#dVer").textContent=ver;$("#pwHint").hidden=!m.pwSet;$("#takePw").hidden=!m.pwSet;applyCfg()}
   else if(m.t==="role"){role=m.role;toast(role==="driver"?"You're driving":"Another phone took control")}
   else if(m.t==="st"){st=m;role=m.you?"driver":"viewer";showStatus()}
-  else if(m.t==="saved"){rebootNeeded=m.reboot;$("#reboot").hidden=!m.reboot;toast(m.reboot?"Saved. Restart the robot to apply Wi-Fi changes.":"Saved")}
+  else if(m.t==="saved"){rebootNeeded=m.reboot;$("#reboot").hidden=!m.reboot;toast(m.reboot?"Saved. Restart the robot to apply.":"Saved")}
   else if(m.t==="diag")showDiag(m);
   else if(m.t==="err")toast(m.msg);
   $("#viewer").classList.toggle("on",role!=="driver");
@@ -202,7 +209,7 @@ function on(m){
 $("#take").onclick=()=>send({t:"take",pw:$("#takePw").value,id:myId});
 
 // ---------- status
-const LED=["Starting","Updating","Waiting for a phone","Connected, weapon safe","Battery low","ARMED","WEAPON RUNNING","Link lost: motors off"];
+const LED=["Starting","Updating","Waiting for a phone","Connected, weapon safe","Battery low","ARMED","WEAPON RUNNING","Link lost: motors off","Not on Wi-Fi"];
 function showStatus(){
   const v=st.vb;
   const n=st.cells||2;
@@ -218,7 +225,7 @@ function showStatus(){
 }
 function showDiag(m){
   $("#dMin").textContent=m.vmin>0?m.vmin.toFixed(2)+" V":"--";$("#dR").textContent=m.rssi?m.rssi+" dBm":"--";
-  $("#dS").textContent=m.ssid+" · channel "+m.ch;$("#dN").textContent=m.clients;$("#dVer").textContent=m.ver;$("#dSlot").textContent=m.slot;
+  $("#dS").textContent=m.ch?m.ssid+" · channel "+m.ch:"not joined";$("#dIp").textContent=m.ip?"http://"+m.host+".local · "+m.ip:"--";$("#dDrop").textContent=m.drops;$("#dN").textContent=m.clients;$("#dVer").textContent=m.ver;$("#dSlot").textContent=m.slot;
   $("#dUp").textContent=Math.floor(m.up/60)+" min "+m.up%60+" s";$("#dHeap").textContent=Math.round(m.heap/1024)+" KB (lowest "+Math.round(m.heapMin/1024)+" KB)";
   $("#dRst").textContent=m.resets.join(", ")||"--";
 }
@@ -316,22 +323,22 @@ function fillForm(){if(!cfg||dirty)return;$$("[data-k]").forEach(e=>{const v=get
 $("#save").onclick=()=>{
   if(!cfg)return;const c=JSON.parse(JSON.stringify(cfg));
   $$("[data-k]").forEach(e=>{let v=e.type==="checkbox"?e.checked:e.value;if(e.type==="number"||e.dataset.n!==undefined)v=Number(v);setK(c,e.dataset.k,v)});
-  if(c.pw&&c.pw.length<8)return toast("Wi-Fi password needs 8+ characters, or leave it blank");
+  if(!c.wifi.ssid)return toast("Set the Wi-Fi name: without it the robot can't be reached");
   const clash=pinClash(c);$("#pinErr").textContent=clash.join(". ");if(clash.length)return toast("Two things on one pin: see Hardware");
   cfg=c;dirty=false;send({t:"cfg",cfg:c});applyCfg()};
-$("#reboot").onclick=()=>{send({t:"reboot"});toast("Restarting… reconnect to the robot's Wi-Fi",5000)};
+$("#reboot").onclick=()=>{send({t:"reboot"});toast("Restarting… this page reconnects by itself",5000)};
 
 // ---------- updates
-$("#otaPull").onclick=()=>{if(!cfg||!cfg.wifi.ssid)return toast("Set the club Wi-Fi under Settings first");if(st.armed)return toast("Disarm first");send({t:"ota"});toast("Updating… the light flashes white",6000)};
+$("#otaPull").onclick=()=>{if(st.armed)return toast("Disarm first");send({t:"ota"});toast("Updating… the light flashes white",6000)};
 $("#otaUp").onclick=()=>{
   const f=$("#otaFile").files[0];if(!f)return toast("Pick a .bin file");if(st.armed)return toast("Disarm first");
   const x=new XMLHttpRequest();x.open("POST","/ota?id="+myId);
   x.upload.onprogress=e=>{if(e.lengthComputable)$("#otaBar").style.width=(100*e.loaded/e.total)+"%"};
-  x.onload=()=>{$("#otaMsg").textContent=x.status===200?"Done. The robot restarts; reconnect in a few seconds.":x.responseText};
+  x.onload=()=>{$("#otaMsg").textContent=x.status===200?"Done. The robot restarts; this page reconnects by itself.":x.responseText};
   x.onerror=()=>{$("#otaMsg").textContent="Upload failed"};$("#otaMsg").textContent="Uploading…";x.send(f)};
 
 // Browsers only allow gamepads on secure pages; the robot serves plain http
-if(!window.isSecureContext)$("#hint").innerHTML="Gamepads are blocked on http pages. One-time fix in Chrome: open <b>chrome://flags/#unsafely-treat-insecure-origin-as-secure</b>, add <b>http://192.168.4.1</b>, Enable, Relaunch.";
+if(!window.isSecureContext)$("#hint").innerHTML="Gamepads are blocked on http pages. One-time fix in Chrome: open <b>chrome://flags/#unsafely-treat-insecure-origin-as-secure</b>, add <b>"+location.origin+"</b>, Enable, Relaunch.";
 connect();
 </script>
 </body>

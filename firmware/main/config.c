@@ -10,13 +10,13 @@ void cfg_defaults(bot_cfg_t *c)
 {
     memset(c, 0, sizeof(*c));
     strcpy(c->name, "Robot");
+    strcpy(c->host, "adambot");
     strcpy(c->src, "stable");
     c->bsense = true;
     c->vdiv = VBAT_DIVIDER;
     c->cells = 0;
     c->drive_on = true;
     c->led_on = true;
-    c->captive = true;
     c->pins = (pin_cfg_t){
         .ain1 = PIN_AIN1, .ain2 = PIN_AIN2, .bin1 = PIN_BIN1, .bin2 = PIN_BIN2,
         .out = {PIN_OUT1, PIN_OUT2, PIN_OUT3, PIN_OUT4}, .led = PIN_LED, .vbat = PIN_VBAT,
@@ -69,8 +69,18 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ?
 void cfg_sanitize(bot_cfg_t *c)
 {
     if (!c->name[0]) strcpy(c->name, "Robot");
-    if (strlen(c->pw) > 0 && strlen(c->pw) < 8) c->pw[0] = 0;   // WPA2 needs 8+; fall back to open
-    if (c->ch != 0 && c->ch != 1 && c->ch != 6 && c->ch != 11) c->ch = clampi(c->ch, 1, 11);
+    // host name: lower-case letters, digits and '-', not starting or ending with '-'
+    char h[sizeof(c->host)];
+    int n = 0;
+    for (const char *s = c->host; *s && n < (int)sizeof(h) - 1; s++) {
+        char ch = *s;
+        if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
+        if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || (ch == '-' && n > 0)) h[n++] = ch;
+        else if ((ch == ' ' || ch == '_') && n > 0) h[n++] = '-';
+    }
+    while (n > 0 && h[n - 1] == '-') n--;
+    h[n] = 0;
+    strcpy(c->host, n ? h : "adambot");
     // pins: anything not on the XIAO goes back to the board default; the motor pins must all differ
     bot_cfg_t def;
     cfg_defaults(&def);

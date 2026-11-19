@@ -70,10 +70,9 @@ typedef struct {
 typedef struct {
     char name[24];         // robot name
     char driver[24];       // driver name
-    char ap[33];           // AP SSID ("" = CGW-<name>)
-    char pw[65];           // AP password ("" = open, else 8+ chars)
-    uint8_t ch;            // 0 = auto (quietest of 1/6/11)
-    char wifi_ssid[33];    // club Wi-Fi, for pulling updates
+    char host[32];         // network name: the page is at http://<host>.local
+    char pw[65];           // control password: needed to take over from the driving phone ("" = none)
+    char wifi_ssid[33];    // Wi-Fi the robot joins (2.4 GHz)
     char wifi_pw[65];
     char src[16];          // firmware source: stable / beta / custom
     char src_url[160];     // custom: base URL of the firmware folder
@@ -82,7 +81,6 @@ typedef struct {
     uint8_t cells;         // 0 = detect 2S / 3S at power-on
     bool drive_on;         // motor driver fitted
     bool led_on;           // status LED fitted
-    bool captive;          // DNS answers every name, so phones show "Sign in to network"
     pin_cfg_t pins;
     drive_cfg_t drive;
     out_cfg_t out[NUM_OUT];

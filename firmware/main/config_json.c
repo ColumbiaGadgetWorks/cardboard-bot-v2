@@ -29,9 +29,8 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
     if (!r) return false;
     GET_STR(r, "name", c->name);
     GET_STR(r, "driver", c->driver);
-    GET_STR(r, "ap", c->ap);
+    GET_STR(r, "host", c->host);
     GET_STR(r, "pw", c->pw);
-    GET_NUM(r, "ch", c->ch);
     GET_STR(r, "src", c->src);
     GET_STR(r, "srcUrl", c->src_url);
     GET_BOOL(r, "bsense", c->bsense);
@@ -39,7 +38,6 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
     GET_NUM(r, "cells", c->cells);
     GET_BOOL(r, "driveOn", c->drive_on);
     GET_BOOL(r, "ledOn", c->led_on);
-    GET_BOOL(r, "captive", c->captive);
     cJSON *p = cJSON_GetObjectItemCaseSensitive(r, "pins");
     if (cJSON_IsObject(p)) {
         pin_cfg_t *x = &c->pins;
@@ -121,9 +119,8 @@ char *cfg_to_json(const bot_cfg_t *c)
     cJSON *r = cJSON_CreateObject();
     cJSON_AddStringToObject(r, "name", c->name);
     cJSON_AddStringToObject(r, "driver", c->driver);
-    cJSON_AddStringToObject(r, "ap", c->ap);
+    cJSON_AddStringToObject(r, "host", c->host);
     cJSON_AddStringToObject(r, "pw", c->pw);
-    cJSON_AddNumberToObject(r, "ch", c->ch);
     cJSON_AddStringToObject(r, "src", c->src);
     cJSON_AddStringToObject(r, "srcUrl", c->src_url);
     cJSON_AddBoolToObject(r, "bsense", c->bsense);
@@ -131,7 +128,6 @@ char *cfg_to_json(const bot_cfg_t *c)
     cJSON_AddNumberToObject(r, "cells", c->cells);
     cJSON_AddBoolToObject(r, "driveOn", c->drive_on);
     cJSON_AddBoolToObject(r, "ledOn", c->led_on);
-    cJSON_AddBoolToObject(r, "captive", c->captive);
     const pin_cfg_t *pc = &c->pins;
     cJSON *p = cJSON_AddObjectToObject(r, "pins");
     cJSON_AddNumberToObject(p, "ain1", pc->ain1);

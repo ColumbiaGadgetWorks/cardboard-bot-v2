@@ -4,21 +4,21 @@ ESP-IDF 5.3 firmware for the Seeed XIAO ESP32-C3 on the CGW main board (`hardwar
 
 - **Install it** from the web flasher: <https://columbiagadgetworks.github.io/cardboard-bot-v2/>
   (desktop Chrome or Edge, or Firefox 151+).
-- **Drive:** join the robot's Wi-Fi (`CGW-<name>`), then open **http://192.168.4.1** in Chrome or
-  Safari on the phone.
+- **Drive:** on the same Wi-Fi as the robot, open **http://adambot.local** (or the address name set
+  for it) in Chrome or Safari.
 
 ## What it does
 
 | Part | Details |
 |---|---|
-| Wi-Fi | Robot hosts its own access point. At power-on it scans channels 1, 6 and 11 for about 0.5 s and takes the quietest. Other `CGW-` robots count three times as much as other networks. After a brownout reset it reuses the last channel. A fixed channel can be set. |
-| Phone page | Plain HTTP on port 80 with a WebSocket at `/ws`. It has touch sticks, gamepad input, ARM, fire buttons, settings, diagnostics and updates. DNS answers every name with the robot and any other address redirects to the controller, so Android's "Sign in to network" pop-up opens it directly (iPhones get no pop-up: open 192.168.4.1 in Safari). Browsers block gamepads on http pages: in Chrome, add `http://192.168.4.1` once under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. |
-| Driver | The first phone after power-on drives, and the same phone gets control back when it reconnects. Other phones watch until they take control (with the Wi-Fi password, if one is set). |
+| Wi-Fi | Robot joins the Wi-Fi set in the flasher (2.4 GHz; WPA2, WPA3 or open). It picks the strongest access point, keeps power saving off (low latency), and retries for ever if the link drops. It answers to `<address name>.local` over mDNS (default `adambot`) and gives the same name to the router. No Wi-Fi set, or a wrong password: the light double-blinks cyan; fix it in the flasher over USB. |
+| Phone page | Plain HTTP on port 80 with a WebSocket at `/ws`. It has touch sticks, gamepad input, ARM, fire buttons, settings, diagnostics and updates. If no status arrives for 2.5 s it drops the socket and reconnects. Browsers block gamepads on http pages: in Chrome, add `http://adambot.local` once under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. |
+| Driver | The first phone after power-on drives, and the same phone gets control back when it reconnects. Other phones watch until they take control (with the control password, if one is set). Anyone on the Wi-Fi can open the page, so set a control password on a shared network. |
 | Drive | Two DRV8870s on the rev B board (or a DRV8833 module on a prototype), slow decay, 20 kHz. Tank, arcade (one stick) or split arcade. Settings: deadzone, expo, turn rate, ramp, extra ramp when spinning, slow mode and invert/swap. A motor voltage cap (default 6 V) scales the PWM to the live pack voltage. |
 | Outputs | OUT1, OUT2, IO21 and IO3 (IO3 only when JP1 is cut). Each is an ESC (hold / toggle / variable, spin-up ramp, max %) or a servo (hold / toggle / position, rest and fire angles, speed). A second ESC starts 300 ms after the first. |
 | Safety | Starts disarmed. With no packets for 300 ms the weapon goes to zero but stays armed. At 1 s it fails safe: drive stops and the light flashes amber. If the link returns within 1 s of failsafe the robot is still armed, and the weapon waits for its button to be released and pressed again. After that it disarms, and the 3rd drop in 60 s disarms even on a quick reconnect. Below 3.2 V per cell for 2 s the weapon locks out; below 3.0 V per cell the drive stops (2S or 3S is detected at power-on). Every time is a setting. |
-| Status light | White blink: starting or updating · blue pulse: waiting for a phone · green: connected, safe · red: armed (fast flash: weapon running) · amber flash: link lost · purple blink: battery low |
-| Updates | Two app slots with automatic rollback: a new version that doesn't stay up for 10 s is replaced by the old one. Update from the phone (upload `app.bin`) or let the robot join the club Wi-Fi and download from GitHub Pages. Blocked while armed. |
+| Status light | White blink: starting or updating · cyan double blink: not on Wi-Fi · blue pulse: waiting for a phone · green: connected, safe · red: armed (fast flash: weapon running) · amber flash: link lost · purple blink: battery low |
+| Updates | Two app slots with automatic rollback: a new version that doesn't stay up for 10 s is replaced by the old one. Update from the phone (upload `app.bin`) or let the robot download from GitHub Pages. Blocked while armed. |
 
 The charger has no data line to the ESP32, so the firmware can't tell when it's charging. Charge
 state is the red LED by the USB-C port. Cell voltages are also not measured separately: the board
@@ -37,7 +37,6 @@ Everything defaults to the main board's wiring, and can be changed for a prototy
 | Battery | detect 2S / 3S at power-on | Or fixed 2S / 3S. Above 8.9 V at power-on counts as 3S |
 | Low-battery lockouts | on, 3.2 V/cell weapon, 3.0 V/cell drive | Needs battery reading |
 | Status LED | on, D9 (GPIO9) | WS2812 data |
-| "Sign in to network" pop-up | on | Off: no captive DNS |
 | Motor inputs | D2, D3 (left), D4, D5 (right) | DRV8870 IN1 / IN2 on the board, or a DRV8833 module's IN1–IN4 |
 | Outputs 1–4 | D10, D7, D6, D0 | Each Off / ESC / Servo. Default: outputs 1 and 2 are weapon ESCs (RB, LB); 3 and 4 off. The board has headers for 1–3 |
 
@@ -95,8 +94,8 @@ In the flasher, pick **Custom repo / branch** and enter `owner/repo` and the bra
 | `main/main.c` | Start-up, 100 Hz control loop, rollback confirmation |
 | `main/control.c` | Mixing, outputs, arm / failsafe / battery rules (plain C, tested on a PC) |
 | `main/hw.c` | LEDC motor and servo PWM, battery ADC, WS2812 over RMT |
-| `main/net.c` | Access point, channel pick, club Wi-Fi |
-| `main/web.c`, `main/dns.c` | HTTP / WebSocket server, captive redirect and DNS |
+| `main/net.c` | Wi-Fi station, reconnect, mDNS |
+| `main/web.c` | HTTP / WebSocket server |
 | `main/ota.c` | Download updates |
 | `main/store.c`, `main/config*.c` | Settings and diagnostics storage |
 | `main/www/index.html` | Phone page (gzipped into the firmware at build time) |

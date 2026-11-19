@@ -28,7 +28,7 @@ const char *app_version(void);
 void app_reboot_soon(void);
 
 // OTA
-void ota_start_pull(void);                 // download from the firmware source over club Wi-Fi
+void ota_start_pull(void);                 // download from the firmware source over Wi-Fi
 const char *ota_status(void);              // "" when idle
 void ota_set_status(const char *s);
 const char *ota_base_url(const bot_cfg_t *c, char *buf, int len);

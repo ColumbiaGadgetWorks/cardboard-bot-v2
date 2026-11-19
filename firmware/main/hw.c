@@ -155,6 +155,9 @@ void hw_led(led_state_t s, uint32_t now)
     case LED_ARMED_RUN:
         if ((now / 80) % 2) r = B;
         break;
+    case LED_NO_WIFI:
+        if (ph < 120 || (ph >= 240 && ph < 360)) g = b = B;
+        break;
     case LED_FAILSAFE:
         if ((now / 200) % 2) {
             r = B;

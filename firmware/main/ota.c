@@ -1,4 +1,4 @@
-// Pull firmware from GitHub Pages over club Wi-Fi. (Phone uploads are in web.c.)
+// Pull firmware from GitHub Pages over the robot's Wi-Fi. (Phone uploads are in web.c.)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,11 +55,8 @@ static void pull_task(void *arg)
     static char url[200];
     ota_base_url(c, url, sizeof(url) - 8);
     strcat(url, "app.bin");
-
-    ota_set_status("Joining club Wi-Fi");
-    bool joined = net_join_club(c, 10000);
     free(c);
-    if (!joined) fail("Can't join the club Wi-Fi");
+    if (!net_up()) fail("Not on Wi-Fi");
 
     ota_set_status("Downloading");
     ESP_LOGI(TAG, "pulling %s", url);

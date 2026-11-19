@@ -64,6 +64,7 @@ static void control_task(void *arg)
         app_lock();
         g_ctl.vbat = vb;
         g_ctl.updating = ota_status()[0] != 0;
+        g_ctl.no_wifi = !net_up();
         if (g_ctl.updating && g_ctl.armed) ctl_disarm(&g_ctl, "Updating firmware");
         ctl_step(&g_ctl, &g_cfg, now, avail);
         ml = g_ctl.motor[0];
@@ -98,7 +99,6 @@ void app_main(void)
 
     net_start(&g_cfg);
     web_start();
-    if (g_cfg.captive) dns_start();   // off: phones don't show "Sign in to network"
 
     // a new image that gets this far without crashing is kept; otherwise the bootloader rolls back
     int64_t t0 = esp_timer_get_time();

@@ -98,23 +98,3 @@ int store_resets(uint8_t out[RESET_HISTORY])
     while (k < RESET_HISTORY && out[k]) k++;
     return k;
 }
-
-uint8_t store_last_channel(void)
-{
-    uint8_t ch = 0;
-    nvs_handle_t n;
-    if (nvs_open("diag", NVS_READONLY, &n) == ESP_OK) {
-        nvs_get_u8(n, "ch", &ch);
-        nvs_close(n);
-    }
-    return ch;
-}
-
-void store_set_last_channel(uint8_t ch)
-{
-    nvs_handle_t n;
-    if (nvs_open("diag", NVS_READWRITE, &n) != ESP_OK) return;
-    nvs_set_u8(n, "ch", ch);
-    nvs_commit(n);
-    nvs_close(n);
-}
