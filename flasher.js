@@ -82,8 +82,8 @@ window.cgwTest = { makeImage, parseImage, crc32, sanitize, pagesBase };
 // ------------------------------------------------------------------ settings form
 // Same as cfg_defaults() in firmware/main/config.c (JSON names from config_json.c)
 const DEFAULTS = {
-  name: "Robot", driver: "", ap: "", pw: "", ch: 0, src: "stable", srcUrl: "",
-  bsense: true, vdiv: 6, cells: 0, driveOn: true, ledOn: true, captive: true,
+  name: "Robot", driver: "", host: "adambot", pw: "", src: "stable", srcUrl: "",
+  bsense: true, vdiv: 6, cells: 0, driveOn: true, ledOn: true,
   pins: { ain1: 4, ain2: 5, bin1: 6, bin2: 7, out: [10, 20, 21, 2], led: 9, vbat: 3 },
   wifi: { ssid: "", pw: "" },
   drive: { mode: 2, invL: false, invR: false, swap: false, revSteer: false, max: 100, slow: 50, slowBtn: 6,
@@ -128,7 +128,6 @@ export function checkCfg(c) {
     take(c.pins.vbat, "the battery input");
   }
   c.out.forEach((o, i) => { if (o.type) take(c.pins.out[i], OUT_NAMES[i]); });
-  if (c.pw && c.pw.length < 8) errs.push("The Wi-Fi password needs 8+ characters, or leave it blank");
   return errs;
 }
 
@@ -190,12 +189,16 @@ document.querySelector("#name").closest(".card").addEventListener("input", () =>
 $("#advReset").onclick = () => {
   const keep = adv;
   adv = clone(DEFAULTS);
-  ["name", "driver", "ap", "pw", "ch", "wifi", "src", "srcUrl"].forEach((k) => (adv[k] = keep[k]));
+  ["name", "driver", "host", "pw", "wifi", "src", "srcUrl"].forEach((k) => (adv[k] = keep[k]));
   fillAdv();
 };
 
 Object.assign(window.cgwTest, { checkCfg, formToCfg: (b) => formToCfg(b), merge, DEFAULTS });
 
+// Same rules as cfg_sanitize(): lower-case letters, digits and '-'
+function hostName(s) {
+  return s.toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "").slice(0, 31);
+}
 function formToCfg(base) {
   // only the fields on this page change; everything else on the robot is kept
   const c = clone(base || {});
@@ -206,9 +209,8 @@ function formToCfg(base) {
   }
   c.name = $("#name").value.trim() || c.name || "Robot";
   c.driver = $("#driver").value.trim();
-  c.ap = $("#ap").value.trim();
+  c.host = hostName($("#host").value) || c.host || "adambot";
   c.pw = $("#pw").value;
-  c.ch = Number($("#ch").value);
   c.wifi = { ssid: $("#wifiSsid").value.trim(), pw: $("#wifiPw").value };
   const upd = $("#upd").value;
   c.src = upd;
@@ -218,9 +220,8 @@ function formToCfg(base) {
 function cfgToForm(c) {
   $("#name").value = c.name || "";
   $("#driver").value = c.driver || "";
-  $("#ap").value = c.ap || "";
+  $("#host").value = c.host || "adambot";
   $("#pw").value = c.pw || "";
-  $("#ch").value = String(c.ch || 0);
   $("#wifiSsid").value = (c.wifi && c.wifi.ssid) || "";
   $("#wifiPw").value = (c.wifi && c.wifi.pw) || "";
   $("#upd").value = ["stable", "beta", "custom"].includes(c.src) ? c.src : "stable";
@@ -305,6 +306,7 @@ async function run(kind) {
     if (kind === "install" || kind === "settings") {
       const c = formToCfg(deviceCfg);
       const errs = checkCfg(merge(DEFAULTS, c));
+      if (!c.wifi || !c.wifi.ssid) errs.push("Set the Wi-Fi name: the robot joins it, and you reach it from there");
       if (errs.length) throw new Error(errs.join(". "));
       files.push({ data: makeImage(c), address: BOTCFG_ADDR });
     }
