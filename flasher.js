@@ -1,6 +1,7 @@
 // Cardboard Bot web flasher: esptool-js over Web Serial.
 // Firmware folders are published by CI as fw/<name>/manifest.json + .bin files (see .github/workflows).
 import { ESPLoader, Transport } from "./vendor/esptool-js-0.6.1/bundle.js";
+import { Improv, S_PROVISIONED } from "./improv.js";
 
 const $ = (s) => document.querySelector(s);
 const BOTCFG_ADDR = 0x10000, BOTCFG_SIZE = 0x1000;
@@ -85,7 +86,7 @@ const DEFAULTS = {
   name: "Robot", driver: "", host: "adambot", pw: "", src: "stable", srcUrl: "",
   bsense: true, vdiv: 6, cells: 0, driveOn: true, ledOn: true,
   pins: { ain1: 4, ain2: 5, bin1: 6, bin2: 7, out: [10, 20, 21, 2], led: 9, vbat: 3 },
-  wifi: { ssid: "", pw: "" },
+  apPw: "cardboard",
   drive: { mode: 2, invL: false, invR: false, swap: false, revSteer: false, max: 100, slow: 50, slowBtn: 6,
            turn: 70, spin: 100, expo: 30, dead: 8, ramp: 150, vcap: 6 },
   // two weapon ESCs: output 1 on RB, output 2 on LB
@@ -189,7 +190,7 @@ document.querySelector("#name").closest(".card").addEventListener("input", () =>
 $("#advReset").onclick = () => {
   const keep = adv;
   adv = clone(DEFAULTS);
-  ["name", "driver", "host", "pw", "wifi", "src", "srcUrl"].forEach((k) => (adv[k] = keep[k]));
+  ["name", "driver", "host", "pw", "nets", "apPw", "wifi", "src", "srcUrl"].forEach((k) => (adv[k] = keep[k]));
   fillAdv();
 };
 
@@ -211,7 +212,6 @@ function formToCfg(base) {
   c.driver = $("#driver").value.trim();
   c.host = hostName($("#host").value) || c.host || "adambot";
   c.pw = $("#pw").value;
-  c.wifi = { ssid: $("#wifiSsid").value.trim(), pw: $("#wifiPw").value };
   const upd = $("#upd").value;
   c.src = upd;
   c.srcUrl = upd === "custom" ? (sourceUrl() || "") : "";
@@ -222,8 +222,6 @@ function cfgToForm(c) {
   $("#driver").value = c.driver || "";
   $("#host").value = c.host || "adambot";
   $("#pw").value = c.pw || "";
-  $("#wifiSsid").value = (c.wifi && c.wifi.ssid) || "";
-  $("#wifiPw").value = (c.wifi && c.wifi.pw) || "";
   $("#upd").value = ["stable", "beta", "custom"].includes(c.src) ? c.src : "stable";
 }
 
@@ -239,6 +237,7 @@ function progress(p) { $("#bar").style.width = Math.round(p * 100) + "%"; }
 
 async function connect() {
   if (loader) return;
+  await improvStop();   // the Wi-Fi step may still hold the port
   port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a }] });
   transport = new Transport(port, true);
   loader = new ESPLoader({ transport, baudrate: 921600, terminal: term, debugLogging: false });
@@ -271,6 +270,7 @@ async function connect() {
 async function disconnect(reset = true) {
   try { if (reset && loader) await loader.after("hard_reset"); } catch (e) { /* robot may already be gone */ }
   try { if (transport) await transport.disconnect(); } catch (e) { /* ignore */ }
+  if (port) lastPort = port;
   loader = transport = port = null;
   $("#chipInfo").textContent = "";
 }
@@ -295,6 +295,7 @@ async function firmwareFiles() {
 
 async function run(kind) {
   if (busy) return;
+  let wifiNext = false;
   busy = true;
   setButtons();
   progress(0);
@@ -306,7 +307,6 @@ async function run(kind) {
     if (kind === "install" || kind === "settings") {
       const c = formToCfg(deviceCfg);
       const errs = checkCfg(merge(DEFAULTS, c));
-      if (!c.wifi || !c.wifi.ssid) errs.push("Set the Wi-Fi name: the robot joins it, and you reach it from there");
       if (errs.length) throw new Error(errs.join(". "));
       files.push({ data: makeImage(c), address: BOTCFG_ADDR });
     }
@@ -327,6 +327,7 @@ async function run(kind) {
     await disconnect(true);
     status({ install: "Installed. The robot is restarting.", update: "Updated, settings kept. The robot is restarting.",
              settings: "Settings saved. The robot is restarting.", erase: "Erased." }[kind]);
+    wifiNext = kind !== "erase";
   } catch (e) {
     status("Error: " + (e.message || e));
     term.writeLine(String(e && e.stack || e));
@@ -335,11 +336,13 @@ async function run(kind) {
     busy = false;
     setButtons();
   }
+  if (wifiNext) afterInstall();
 }
 
 function setButtons() {
   const ok = !!navigator.serial && !busy;
-  ["#install", "#update", "#settingsOnly", "#erase", "#connect"].forEach((s) => ($(s).disabled = !ok));
+  ["#install", "#update", "#settingsOnly", "#erase", "#connect", "#wifiStart"].forEach((s) => ($(s).disabled = !ok));
+  ["#wifiGo", "#wifiScan"].forEach((s) => ($(s).disabled = !ok || !improv));
 }
 $("#connect").onclick = async () => {
   if (busy) return;
@@ -353,6 +356,136 @@ $("#install").onclick = () => run("install");
 $("#update").onclick = () => run("update");
 $("#settingsOnly").onclick = () => run("settings");
 $("#erase").onclick = () => run("erase");
+
+// ------------------------------------------------------------------ step 5: Wi-Fi over USB (Improv)
+let improv = null, lastPort = null;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function wifiStatus(t, links) {
+  const e = $("#wifiStatus");
+  e.textContent = t;
+  for (const u of links || []) {
+    if (!/^http:\/\/[\w.-]+\/?$/.test(u)) continue;
+    const a = document.createElement("a");
+    a.href = a.textContent = u;
+    a.target = "_blank";
+    e.append(" ", a);
+  }
+}
+async function improvStop() {
+  const i = improv;
+  improv = null;
+  $("#wifiBox").classList.add("hidden");
+  setButtons();
+  if (i) await i.close();
+}
+// open the port and wait for the robot to answer (it may still be starting)
+async function improvOpen(p) {
+  const imp = new Improv(p, (l) => term.writeLine(l));
+  await imp.open();
+  try {
+    for (let i = 0; i < 15; i++) {
+      try { return { imp, st: await imp.state(800) }; } catch (e) { if (imp.closed) throw e; }
+    }
+    throw new Error("no answer");
+  } catch (e) {
+    await imp.close();
+    throw e;
+  }
+}
+async function improvStart(p) {
+  await improvStop();
+  const { imp, st } = await improvOpen(p);
+  improv = imp;
+  let who = "the robot";
+  try { const i = await imp.info(); who = `${i.name} (${i.firmware} ${i.version})`; } catch (e) { /* older firmware */ }
+  $("#wifiInfo").textContent = "Talking to " + who + " over USB.";
+  $("#wifiBox").classList.remove("hidden");
+  setButtons();
+  if (st.state === S_PROVISIONED) wifiStatus("It's on Wi-Fi now:", st.urls);
+  else wifiStatus("Not on Wi-Fi yet. Pick a network and enter its password.");
+  await wifiScan();
+}
+async function wifiScan() {
+  if (!improv) return;
+  $("#wifiScan").disabled = true;
+  const keep = $("#wifiSel").value;
+  $("#wifiSel").innerHTML = "<option>Scanning…</option>";
+  let list = [];
+  try { list = await improv.scan(); } catch (e) { wifiStatus("Scan failed: " + e.message); }
+  const sel = $("#wifiSel");
+  sel.innerHTML = "";
+  for (const n of list) {
+    const o = document.createElement("option");
+    o.value = n.ssid;
+    o.textContent = `${n.ssid}  (${n.rssi} dBm${n.secure ? "" : ", open"})`;
+    sel.append(o);
+  }
+  const o = document.createElement("option");
+  o.value = "";
+  o.textContent = "Other (hidden network)…";
+  sel.append(o);
+  if ([...sel.options].some((x) => x.value === keep)) sel.value = keep;
+  wifiSel();
+  setButtons();
+}
+function wifiSel() { $("#wifiOtherBox").classList.toggle("hidden", $("#wifiSel").value !== ""); }
+$("#wifiSel").addEventListener("change", wifiSel);
+$("#wifiScan").onclick = wifiScan;
+$("#wifiGo").onclick = async () => {
+  if (!improv || busy) return;
+  const ssid = $("#wifiSel").value || $("#wifiSsid").value.trim(), pw = $("#wifiPw").value;
+  if (!ssid) return wifiStatus("Pick a network, or type its name.");
+  if (pw && pw.length < 8) return wifiStatus("Wi-Fi passwords are at least 8 characters.");
+  busy = true;
+  setButtons();
+  wifiStatus(`Joining ${ssid}… (up to 30 s)`);
+  try {
+    const urls = await improv.wifi(ssid, pw);
+    wifiStatus(`Joined ${ssid} and saved it. Open the robot on a phone or laptop on the same Wi-Fi:`, urls);
+  } catch (e) {
+    wifiStatus(`Couldn't join ${ssid}: ${e.message}. Check the password, and that it's a 2.4 GHz network.`);
+  } finally {
+    busy = false;
+    setButtons();
+  }
+};
+$("#wifiStart").onclick = async () => {
+  if (busy) return;
+  busy = true;
+  setButtons();
+  try {
+    await improvStop();
+    if (loader) await disconnect(true);
+    wifiStatus("Connecting…");
+    await improvStart(await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a }] }));
+  } catch (e) {
+    wifiStatus("Couldn't talk to the robot: " + (e.message || e) + ". It needs firmware 2.1 or later; unplug and replug it, then try again.");
+  } finally {
+    busy = false;
+    setButtons();
+  }
+};
+// right after flashing: the robot restarts (and its USB port with it), so reopen it
+async function afterInstall() {
+  busy = true;
+  setButtons();
+  wifiStatus("Waiting for the robot to restart…");
+  $("#wifiCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    for (let i = 0; i < 12; i++) {
+      await sleep(1000);
+      const ports = (await navigator.serial.getPorts()).filter((p) => p.getInfo().usbVendorId === 0x303a);
+      if (lastPort && ports.includes(lastPort)) ports.unshift(...ports.splice(ports.indexOf(lastPort), 1));
+      for (const p of ports) {
+        try { await improvStart(p); return; } catch (e) { /* not ready yet, or another device */ }
+      }
+    }
+    wifiStatus("The robot restarted. Press Set up Wi-Fi and pick it again to give it your Wi-Fi.");
+  } finally {
+    busy = false;
+    setButtons();
+  }
+}
 
 if (!navigator.serial) $("#noSerial").classList.remove("hidden");
 setButtons();
