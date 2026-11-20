@@ -282,7 +282,7 @@ void ctl_step(ctl_t *c, const bot_cfg_t *cfg, uint32_t now, bool out_avail[NUM_O
     // ---- status light: the most urgent state wins ----
     if (c->updating) c->led = LED_UPDATE;
     else if (!c->linked && now < 1500) c->led = LED_BOOT;
-    else if (c->no_wifi && !c->armed) c->led = LED_NO_WIFI;
+    else if (c->no_wifi && !c->armed) c->led = c->ap_open ? LED_AP : LED_NO_WIFI;
     else if (c->failsafe) c->led = LED_FAILSAFE;
     else if (c->armed) c->led = c->weapon_running ? LED_ARMED_RUN : LED_ARMED;
     else if (c->weapon_lock || c->drive_lock) c->led = LED_LOWBATT;

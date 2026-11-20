@@ -18,9 +18,10 @@ Notes for the next agent. Read `README.md`, `hardware/README.md`, `firmware/READ
   - Fab files are in `hardware/fab/*revB*`; the owner has them for quoting.
   - Nothing has been ordered or built yet.
 - **Firmware and flasher** (on `main`): CI builds every push and publishes to the `gh-pages` branch.
-  - No version tag exists yet, so `fw/stable` is a copy of `main`.
+  - `v2.1.0` (20 Nov 2026) is the first tag, so `fw/stable` is that release.
   - The robot web page is plain HTTP; HTTPS and the certificate were removed at the owner's request.
-- **Nothing has run on real hardware.** Only host unit tests (66 checks) and browser tests against a mock robot have run.
+  - 2.1.0 Wi-Fi: up to 5 saved networks (added on the robot page), Wi-Fi set in flasher step 5 over USB with Improv serial (like WLED), backup access point `<host>-XXXX` / `cardboard` after 60 s at http://192.168.4.1.
+- **Real hardware:** the owner flashed 2.0 on their prototype and it never joined the Wi-Fi typed in the flasher. 2.1.0 is the fix attempt and hasn't been confirmed on hardware yet. If Improv can't reach the robot, the backup access point is the way in.
 
 ## Open items
 1. **GitHub Pages:** the owner reported the flasher URL wasn't working; `has_pages` was false. I told them to turn on Pages (Settings → Pages → Deploy from branch `gh-pages`, `/ (root)`). It's unknown whether they have done it.
@@ -32,7 +33,7 @@ Notes for the next agent. Read `README.md`, `hardware/README.md`, `firmware/READ
    - only 2 mounting holes
    - DRV8870 drops out below about 6.5 V on 2S
 4. **Old branches:** `firmware`, `flasher-options` and `hardware` are merged but not deleted (deleting was blocked here).
-5. **Hardware bring-up:** flash a board; check the LED goes white then blue; set the Wi-Fi in the flasher, then open http://adambot.local from a phone on that Wi-Fi; test drive with the wheels up; test the ESCs with the weapon removed; test failsafe by turning off phone Wi-Fi.
+5. **Hardware bring-up:** flash a board; check the LED goes white then blue; set the Wi-Fi in flasher step 5, then open http://adambot.local from a phone on that Wi-Fi; test drive with the wheels up; test the ESCs with the weapon removed; test failsafe by turning off phone Wi-Fi.
 
 ## Owner's prototype (for testing before the PCB)
 - Parts: XIAO ESP32-C3, a DRV8833 breakout (WWZMDiB, J1 jumper left bridged), 2 ESCs, a 2S LiPo.

@@ -341,6 +341,38 @@ static void test_image(void)
     CHECK(!cfg_parse_image(img, BOTCFG_SIZE, &out, &len));
 }
 
+static void test_nets(void)
+{
+    bot_cfg_t p;
+    cfg_defaults(&p);
+    CHECK(cfg_net_count(&p) == 0 && !strcmp(p.ap_pw, "cardboard"));
+    cfg_net_add(&p, "home", "pw1");
+    cfg_net_add(&p, "club", "pw2");
+    CHECK(cfg_net_count(&p) == 2 && !strcmp(p.nets[0].ssid, "club") && !strcmp(p.nets[1].ssid, "home"));
+    cfg_net_add(&p, "home", "new");   // update moves it to the front, no duplicate
+    CHECK(cfg_net_count(&p) == 2 && !strcmp(p.nets[0].ssid, "home") && !strcmp(p.nets[0].pw, "new"));
+    for (int i = 0; i < 6; i++) {
+        char n[8];
+        snprintf(n, sizeof(n), "n%d", i);
+        cfg_net_add(&p, n, "");
+    }
+    CHECK(cfg_net_count(&p) == MAX_NETS && !strcmp(p.nets[0].ssid, "n5"));
+    CHECK(cfg_net_remove(&p, "n3") && cfg_net_count(&p) == MAX_NETS - 1 && !cfg_net_remove(&p, "zz"));
+    for (int i = 0; i < MAX_NETS - 1; i++) CHECK(p.nets[i].ssid[0]);
+    // gaps and repeats are removed; a too-short access point password goes back to the default
+    cfg_defaults(&p);
+    strcpy(p.nets[1].ssid, "a");
+    strcpy(p.nets[3].ssid, "a");
+    strcpy(p.nets[4].ssid, "b");
+    strcpy(p.ap_pw, "short");
+    cfg_sanitize(&p);
+    CHECK(cfg_net_count(&p) == 2 && !strcmp(p.nets[0].ssid, "a") && !strcmp(p.nets[1].ssid, "b"));
+    CHECK(!strcmp(p.ap_pw, "cardboard"));
+    p.ap_pw[0] = 0;
+    cfg_sanitize(&p);
+    CHECK(p.ap_pw[0] == 0);
+}
+
 int main(void)
 {
     test_drive();
@@ -351,6 +383,7 @@ int main(void)
     test_features();
     test_cells();
     test_image();
+    test_nets();
     printf("%d checks, %d failed\n", checks, fails);
     return fails != 0;
 }

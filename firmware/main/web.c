@@ -90,6 +90,72 @@ static void set_driver(int fd, const char *id)
 }
 
 // ---------------------------------------------------------------- commands
+static void add_net_state(cJSON *j)
+{
+    cJSON_AddBoolToObject(j, "wifiUp", net_up());
+    cJSON_AddBoolToObject(j, "ap", net_ap_on());
+    cJSON_AddStringToObject(j, "apSsid", net_ap_ssid());
+    char ip[16];
+    net_ip(ip, sizeof(ip));
+    cJSON_AddStringToObject(j, "ip", ip);
+}
+
+static esp_err_t send_nets(httpd_req_t *req, const char *msg)
+{
+    cJSON *j = cJSON_CreateObject();
+    cJSON_AddStringToObject(j, "t", "nets");
+    cJSON *l = cJSON_AddArrayToObject(j, "nets");
+    app_lock();
+    for (int i = 0; i < MAX_NETS; i++)
+        if (g_cfg.nets[i].ssid[0]) cJSON_AddItemToArray(l, cJSON_CreateString(g_cfg.nets[i].ssid));
+    app_unlock();
+    if (msg) cJSON_AddStringToObject(j, "msg", msg);
+    add_net_state(j);
+    return ws_send_json(req, j);
+}
+
+// add / remove a saved network; ssid: "" with remove = false only lists them
+static esp_err_t cmd_net(httpd_req_t *req, cJSON *m, bool remove)
+{
+    cJSON *s = cJSON_GetObjectItem(m, "ssid"), *pw = cJSON_GetObjectItem(m, "pw");
+    const char *ssid = cJSON_IsString(s) ? s->valuestring : "";
+    const char *pws = cJSON_IsString(pw) ? pw->valuestring : "";
+    if (!ssid[0] || strlen(ssid) > 32) return send_err(req, "Wi-Fi name missing or too long");
+    if (!remove && (strlen(pws) > 64 || (pws[0] && strlen(pws) < 8)))
+        return send_err(req, "Wi-Fi passwords are 8 to 64 characters");
+    bot_cfg_t *n = malloc(sizeof(bot_cfg_t));
+    if (!n) return ESP_ERR_NO_MEM;
+    app_lock();
+    if (remove) cfg_net_remove(&g_cfg, ssid);
+    else cfg_net_add(&g_cfg, ssid, pws);
+    *n = g_cfg;
+    app_unlock();
+    bool ok = store_save(n);
+    // not on Wi-Fi yet (on the access point): try the new network now
+    bool join = !remove && !net_up();
+    net_set_nets(n, join);
+    free(n);
+    if (!ok) return send_err(req, "Saving settings failed");
+    return send_nets(req, remove ? "Removed" : join ? "Saved. Joining it now: this phone may lose the robot's access point" : "Saved");
+}
+
+static esp_err_t cmd_scan(httpd_req_t *req)
+{
+    static net_seen_t seen[20];
+    int n = net_scan(seen, 20);
+    cJSON *j = cJSON_CreateObject();
+    cJSON_AddStringToObject(j, "t", "scan");
+    cJSON *l = cJSON_AddArrayToObject(j, "list");
+    for (int i = 0; i < n; i++) {
+        cJSON *e = cJSON_CreateObject();
+        cJSON_AddStringToObject(e, "ssid", seen[i].ssid);
+        cJSON_AddNumberToObject(e, "rssi", seen[i].rssi);
+        cJSON_AddBoolToObject(e, "lock", seen[i].secure);
+        cJSON_AddItemToArray(l, e);
+    }
+    return ws_send_json(req, j);
+}
+
 static esp_err_t cmd_hello(httpd_req_t *req, int fd, cJSON *m)
 {
     cJSON *id = cJSON_GetObjectItem(m, "id");
@@ -110,14 +176,17 @@ static esp_err_t cmd_hello(httpd_req_t *req, int fd, cJSON *m)
     cJSON *cj = cs ? cJSON_Parse(cs) : NULL;
     free(cs);
     if (cj) {
-        // the control and Wi-Fi passwords go only to the driving phone
+        // Wi-Fi passwords never leave the robot; the control and access point passwords go only
+        // to the driving phone
+        cJSON *e;
+        cJSON_ArrayForEach(e, cJSON_GetObjectItem(cj, "nets")) cJSON_DeleteItemFromObject(e, "pw");
         if (fd != driver_fd) {
             cJSON_ReplaceItemInObject(cj, "pw", cJSON_CreateString(""));
-            cJSON *w = cJSON_GetObjectItem(cj, "wifi");
-            if (w) cJSON_ReplaceItemInObject(w, "pw", cJSON_CreateString(""));
+            cJSON_ReplaceItemInObject(cj, "apPw", cJSON_CreateString(""));
         }
         cJSON_AddItemToObject(j, "cfg", cj);
     }
+    add_net_state(j);
     return ws_send_json(req, j);
 }
 
@@ -136,7 +205,7 @@ static esp_err_t cmd_take(httpd_req_t *req, int fd, cJSON *m)
 // network, pin and fitted-hardware settings only take effect after a restart
 static bool needs_reboot(const bot_cfg_t *a, const bot_cfg_t *b)
 {
-    return strcmp(a->host, b->host) || strcmp(a->wifi_ssid, b->wifi_ssid) || strcmp(a->wifi_pw, b->wifi_pw) ||
+    return strcmp(a->host, b->host) || strcmp(a->ap_pw, b->ap_pw) ||
            a->bsense != b->bsense || a->drive_on != b->drive_on || a->led_on != b->led_on ||
            memcmp(&a->pins, &b->pins, sizeof(a->pins));
 }
@@ -155,6 +224,7 @@ static esp_err_t cmd_cfg(httpd_req_t *req, cJSON *m)
     app_lock();
     *n = g_cfg;
     bool ok = cfg_from_json(n, s);
+    memcpy(n->nets, g_cfg.nets, sizeof(n->nets));   // networks change only through netAdd / netDel
     bool reboot = ok && needs_reboot(&g_cfg, n);
     if (ok) g_cfg = *n;
     app_unlock();
@@ -202,6 +272,10 @@ static esp_err_t cmd_diag(httpd_req_t *req)
     net_ip(ip, sizeof(ip));
     cJSON_AddStringToObject(j, "ip", ip);
     cJSON_AddNumberToObject(j, "drops", net_drops());
+    cJSON_AddBoolToObject(j, "ap", net_ap_on());
+    cJSON_AddStringToObject(j, "apSsid", net_ap_ssid());
+    cJSON_AddNumberToObject(j, "apClients", net_clients());
+    cJSON_AddBoolToObject(j, "lowTx", net_low_power());
     cJSON_AddNumberToObject(j, "why", net_last_reason());
     cJSON_AddNumberToObject(j, "up", now_ms() / 1000);
     cJSON_AddNumberToObject(j, "heap", esp_get_free_heap_size());
@@ -238,6 +312,9 @@ static esp_err_t handle_text(httpd_req_t *req, int fd, const char *txt)
         app_unlock();
     } else if (armed) e = send_err(req, "Disarm first");
     else if (!strcmp(cmd, "cfg")) e = cmd_cfg(req, m);
+    else if (!strcmp(cmd, "netAdd")) e = cmd_net(req, m, false);
+    else if (!strcmp(cmd, "netDel")) e = cmd_net(req, m, true);
+    else if (!strcmp(cmd, "scan")) e = cmd_scan(req);
     else if (!strcmp(cmd, "cal")) {
         cJSON *o = cJSON_GetObjectItem(m, "out"), *us = cJSON_GetObjectItem(m, "us");
         if (cJSON_IsNumber(o) && cJSON_IsNumber(us)) app_calibrate(o->valueint, us->valueint);
@@ -427,8 +504,16 @@ static esp_err_t ota_handler(httpd_req_t *req)
 // Any other address: send it to the controller
 static esp_err_t other_handler(httpd_req_t *req)
 {
+    // on the robot's access point every address lands here (captive DNS). iPhones check a page
+    // and, given "Success", stay on the network without the sign-in sheet (which can't drive).
+    char ua[96] = "";
+    httpd_req_get_hdr_value_str(req, "User-Agent", ua, sizeof(ua));
+    if (strstr(ua, "CaptiveNetworkSupport")) {
+        httpd_resp_set_type(req, "text/html");
+        return httpd_resp_sendstr(req, "<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>");
+    }
     httpd_resp_set_status(req, "302 Found");
-    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_set_hdr(req, "Location", net_ap_on() && !net_up() ? "http://192.168.4.1/" : "/");
     return httpd_resp_send(req, NULL, 0);
 }
 

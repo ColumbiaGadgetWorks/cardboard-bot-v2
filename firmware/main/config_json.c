@@ -54,10 +54,30 @@ bool cfg_from_json(bot_cfg_t *c, const char *json)
                 if (cJSON_IsNumber(e)) x->out[i] = e->valuedouble;
             }
     }
+    GET_STR(r, "apPw", c->ap_pw);
+    cJSON *nl = cJSON_GetObjectItemCaseSensitive(r, "nets");
+    if (cJSON_IsArray(nl)) {
+        memset(c->nets, 0, sizeof(c->nets));
+        int k = 0;
+        cJSON *e;
+        cJSON_ArrayForEach(e, nl) {
+            if (k >= MAX_NETS) break;
+            if (!cJSON_IsObject(e)) continue;
+            GET_STR(e, "ssid", c->nets[k].ssid);
+            GET_STR(e, "pw", c->nets[k].pw);
+            if (c->nets[k].ssid[0]) k++;
+            else memset(&c->nets[k], 0, sizeof(c->nets[k]));
+        }
+    }
+    // settings from firmware 2.0 and older: one network under "wifi"
     cJSON *w = cJSON_GetObjectItemCaseSensitive(r, "wifi");
     if (cJSON_IsObject(w)) {
-        GET_STR(w, "ssid", c->wifi_ssid);
-        GET_STR(w, "pw", c->wifi_pw);
+        wifi_net_t old = {0};
+        GET_STR(w, "ssid", old.ssid);
+        GET_STR(w, "pw", old.pw);
+        bool have = false;
+        for (int i = 0; i < MAX_NETS; i++) have |= !strcmp(c->nets[i].ssid, old.ssid);
+        if (old.ssid[0] && !have) cfg_net_add(c, old.ssid, old.pw);
     }
     cJSON *d = cJSON_GetObjectItemCaseSensitive(r, "drive");
     if (cJSON_IsObject(d)) {
@@ -138,9 +158,15 @@ char *cfg_to_json(const bot_cfg_t *c)
     for (int i = 0; i < NUM_OUT; i++) cJSON_AddItemToArray(po, cJSON_CreateNumber(pc->out[i]));
     cJSON_AddNumberToObject(p, "led", pc->led);
     cJSON_AddNumberToObject(p, "vbat", pc->vbat);
-    cJSON *w = cJSON_AddObjectToObject(r, "wifi");
-    cJSON_AddStringToObject(w, "ssid", c->wifi_ssid);
-    cJSON_AddStringToObject(w, "pw", c->wifi_pw);
+    cJSON_AddStringToObject(r, "apPw", c->ap_pw);
+    cJSON *nl = cJSON_AddArrayToObject(r, "nets");
+    for (int i = 0; i < MAX_NETS; i++) {
+        if (!c->nets[i].ssid[0]) continue;
+        cJSON *e = cJSON_CreateObject();
+        cJSON_AddStringToObject(e, "ssid", c->nets[i].ssid);
+        cJSON_AddStringToObject(e, "pw", c->nets[i].pw);
+        cJSON_AddItemToArray(nl, e);
+    }
     const drive_cfg_t *x = &c->drive;
     cJSON *d = cJSON_AddObjectToObject(r, "drive");
     cJSON_AddNumberToObject(d, "mode", x->mode);

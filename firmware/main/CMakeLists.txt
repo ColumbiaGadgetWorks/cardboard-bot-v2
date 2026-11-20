@@ -1,9 +1,9 @@
 idf_component_register(
-    SRCS "main.c" "config.c" "config_json.c" "control.c" "hw.c" "store.c" "net.c" "web.c" "ota.c"
+    SRCS "main.c" "config.c" "config_json.c" "control.c" "hw.c" "store.c" "net.c" "dns.c" "improv.c" "web.c" "ota.c"
     INCLUDE_DIRS "."
     REQUIRES esp_driver_gpio esp_driver_ledc esp_driver_rmt esp_adc esp_wifi esp_netif esp_event nvs_flash
              esp_http_server esp_http_client esp_https_ota app_update esp_partition
-             esp_timer json mbedtls lwip)
+             esp_timer json mbedtls lwip esp_driver_usb_serial_jtag hal)
 
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-format-truncation -Wno-stringop-truncation)
 

@@ -11,6 +11,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "hw.h"
+#include "improv.h"
 #include "net.h"
 #include "store.h"
 #include "web.h"
@@ -49,6 +50,8 @@ void app_reboot_soon(void)
     if (esp_timer_create(&a, &t) == ESP_OK) esp_timer_start_once(t, 800 * 1000);
 }
 
+static volatile bool net_state_no_wifi = true, net_state_ap;
+
 // 100 Hz: battery, control rules, motors, outputs, status LED
 static void control_task(void *arg)
 {
@@ -64,7 +67,8 @@ static void control_task(void *arg)
         app_lock();
         g_ctl.vbat = vb;
         g_ctl.updating = ota_status()[0] != 0;
-        g_ctl.no_wifi = !net_up();
+        g_ctl.no_wifi = net_state_no_wifi;
+        g_ctl.ap_open = net_state_ap;
         if (g_ctl.updating && g_ctl.armed) ctl_disarm(&g_ctl, "Updating firmware");
         ctl_step(&g_ctl, &g_cfg, now, avail);
         ml = g_ctl.motor[0];
@@ -99,12 +103,15 @@ void app_main(void)
 
     net_start(&g_cfg);
     web_start();
+    improv_start();
 
     // a new image that gets this far without crashing is kept; otherwise the bootloader rolls back
     int64_t t0 = esp_timer_get_time();
     bool marked = false;
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(200));
+        net_state_ap = net_ap_on();
+        net_state_no_wifi = !net_up() && net_clients() == 0;
         web_broadcast_status();
         if (!marked && esp_timer_get_time() - t0 > 10 * 1000000LL) {
             esp_ota_mark_app_valid_cancel_rollback();

@@ -21,14 +21,16 @@ typedef enum {
     LED_ARMED,        // red solid
     LED_ARMED_RUN,    // red fast flash: weapon running
     LED_FAILSAFE,     // amber flash: link lost
-    LED_NO_WIFI,      // cyan double blink: not on Wi-Fi (joining, or wrong name / password)
+    LED_NO_WIFI,      // cyan double blink: joining Wi-Fi
+    LED_AP,           // cyan slow blink: not on Wi-Fi, own access point open for a phone to join
 } led_state_t;
 
 typedef struct {
     // inputs the caller fills in each step
     float vbat;          // pack voltage, < 0 = not measured
     bool updating;
-    bool no_wifi;        // robot not joined to Wi-Fi
+    bool no_wifi;        // robot not joined to Wi-Fi and no phone on its access point
+    bool ap_open;        // its access point is open
 
     // outputs
     float motor[2];      // left, right: -1..1 duty, voltage cap applied

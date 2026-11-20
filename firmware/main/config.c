@@ -12,6 +12,7 @@ void cfg_defaults(bot_cfg_t *c)
     strcpy(c->name, "Robot");
     strcpy(c->host, "adambot");
     strcpy(c->src, "stable");
+    strcpy(c->ap_pw, "cardboard");
     c->bsense = true;
     c->vdiv = VBAT_DIVIDER;
     c->cells = 0;
@@ -63,6 +64,40 @@ void cfg_out_avail(const bot_cfg_t *c, bool avail[NUM_OUT])
     }
 }
 
+int cfg_net_count(const bot_cfg_t *c)
+{
+    int n = 0;
+    for (int i = 0; i < MAX_NETS; i++) n += c->nets[i].ssid[0] != 0;
+    return n;
+}
+
+void cfg_net_add(bot_cfg_t *c, const char *ssid, const char *pw)
+{
+    if (!ssid || !ssid[0]) return;
+    wifi_net_t nw = {0};
+    strncpy(nw.ssid, ssid, sizeof(nw.ssid) - 1);
+    strncpy(nw.pw, pw ? pw : "", sizeof(nw.pw) - 1);
+    int at = MAX_NETS - 1;   // full and new: the last one drops off
+    for (int i = 0; i < MAX_NETS; i++)
+        if (!c->nets[i].ssid[0] || !strcmp(c->nets[i].ssid, nw.ssid)) {
+            at = i;
+            break;
+        }
+    memmove(&c->nets[1], &c->nets[0], at * sizeof(wifi_net_t));
+    c->nets[0] = nw;
+}
+
+bool cfg_net_remove(bot_cfg_t *c, const char *ssid)
+{
+    for (int i = 0; i < MAX_NETS; i++)
+        if (c->nets[i].ssid[0] && !strcmp(c->nets[i].ssid, ssid)) {
+            memmove(&c->nets[i], &c->nets[i + 1], (MAX_NETS - 1 - i) * sizeof(wifi_net_t));
+            memset(&c->nets[MAX_NETS - 1], 0, sizeof(wifi_net_t));
+            return true;
+        }
+    return false;
+}
+
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -81,6 +116,19 @@ void cfg_sanitize(bot_cfg_t *c)
     while (n > 0 && h[n - 1] == '-') n--;
     h[n] = 0;
     strcpy(c->host, n ? h : "adambot");
+    // fallback access point: WPA2 needs 8+ characters; anything shorter goes back to the default
+    size_t apl = strlen(c->ap_pw);
+    if (apl > 0 && apl < 8) strcpy(c->ap_pw, "cardboard");
+    // networks: no gaps, no empty names, no repeats
+    int k = 0;
+    for (int i = 0; i < MAX_NETS; i++) {
+        bool dup = false;
+        for (int j = 0; j < k; j++) dup |= !strcmp(c->nets[j].ssid, c->nets[i].ssid);
+        if (!c->nets[i].ssid[0] || dup) continue;
+        if (k != i) c->nets[k] = c->nets[i];
+        k++;
+    }
+    for (int i = k; i < MAX_NETS; i++) memset(&c->nets[i], 0, sizeof(c->nets[i]));
     // pins: anything not on the XIAO goes back to the board default; the motor pins must all differ
     bot_cfg_t def;
     cfg_defaults(&def);

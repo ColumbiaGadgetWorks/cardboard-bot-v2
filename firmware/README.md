@@ -3,7 +3,8 @@
 ESP-IDF 5.3 firmware for the Seeed XIAO ESP32-C3 on the CGW main board (`hardware/`).
 
 - **Install it** from the web flasher: <https://columbiagadgetworks.github.io/cardboard-bot-v2/>
-  (desktop Chrome or Edge, or Firefox 151+).
+  (desktop Chrome or Edge, or Firefox 151+). Step 5 then gives the robot your Wi-Fi over USB
+  (Improv serial, like the WLED installer).
 - **Drive:** on the same Wi-Fi as the robot, open **http://adambot.local** (or the address name set
   for it) in Chrome or Safari.
 
@@ -11,13 +12,14 @@ ESP-IDF 5.3 firmware for the Seeed XIAO ESP32-C3 on the CGW main board (`hardwar
 
 | Part | Details |
 |---|---|
-| Wi-Fi | Robot joins the Wi-Fi set in the flasher (2.4 GHz; WPA2, WPA3 or open). It picks the strongest access point, keeps power saving off (low latency), and retries for ever if the link drops. It answers to `<address name>.local` over mDNS (default `adambot`) and gives the same name to the router. No Wi-Fi set, or a wrong password: the light double-blinks cyan; fix it in the flasher over USB. |
+| Wi-Fi | Up to 5 saved networks (2.4 GHz; WPA2, WPA3 or open). The robot scans and joins the strongest saved one in range, retries the same router quickly after a drop, keeps power saving off (low latency), and drops transmit power if a board can't join at full power. It answers to `<address name>.local` over mDNS (default `adambot`). Networks are added in the flasher's Wi-Fi step (USB) or on the phone page (Settings → Wi-Fi networks). |
+| Backup access point | With no saved network, or none joined for 60 s, the robot opens its own Wi-Fi `<address name>-XXXX` (password `cardboard`, changeable in Settings) and answers at **http://192.168.4.1** (phones show it as a sign-in page). It keeps trying the saved networks unless a phone is on the access point, and closes it once joined and the phone has left. |
 | Phone page | Plain HTTP on port 80 with a WebSocket at `/ws`. It has touch sticks, gamepad input, ARM, fire buttons, settings, diagnostics and updates. If no status arrives for 2.5 s it drops the socket and reconnects. Browsers block gamepads on http pages: in Chrome, add `http://adambot.local` once under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`. |
 | Driver | The first phone after power-on drives, and the same phone gets control back when it reconnects. Other phones watch until they take control (with the control password, if one is set). Anyone on the Wi-Fi can open the page, so set a control password on a shared network. |
 | Drive | Two DRV8870s on the rev B board (or a DRV8833 module on a prototype), slow decay, 20 kHz. Tank, arcade (one stick) or split arcade. Settings: deadzone, expo, turn rate, ramp, extra ramp when spinning, slow mode and invert/swap. A motor voltage cap (default 6 V) scales the PWM to the live pack voltage. |
 | Outputs | OUT1, OUT2, IO21 and IO3 (IO3 only when JP1 is cut). Each is an ESC (hold / toggle / variable, spin-up ramp, max %) or a servo (hold / toggle / position, rest and fire angles, speed). A second ESC starts 300 ms after the first. |
 | Safety | Starts disarmed. With no packets for 300 ms the weapon goes to zero but stays armed. At 1 s it fails safe: drive stops and the light flashes amber. If the link returns within 1 s of failsafe the robot is still armed, and the weapon waits for its button to be released and pressed again. After that it disarms, and the 3rd drop in 60 s disarms even on a quick reconnect. Below 3.2 V per cell for 2 s the weapon locks out; below 3.0 V per cell the drive stops (2S or 3S is detected at power-on). Every time is a setting. |
-| Status light | White blink: starting or updating · cyan double blink: not on Wi-Fi · blue pulse: waiting for a phone · green: connected, safe · red: armed (fast flash: weapon running) · amber flash: link lost · purple blink: battery low |
+| Status light | White blink: starting or updating · cyan double blink: joining Wi-Fi · slow cyan blink: backup access point open · blue pulse: waiting for a phone · green: connected, safe · red: armed (fast flash: weapon running) · amber flash: link lost · purple blink: battery low |
 | Updates | Two app slots with automatic rollback: a new version that doesn't stay up for 10 s is replaced by the old one. Update from the phone (upload `app.bin`) or let the robot download from GitHub Pages. Blocked while armed. |
 
 The charger has no data line to the ESP32, so the firmware can't tell when it's charging. Charge
@@ -48,8 +50,9 @@ pin two ways.
 
 Settings are JSON in the 4 KB `botcfg` partition at 0x10000. The image is `"BCFG"`, version 1,
 16-bit length, then the CRC-32 of the JSON, then the JSON, padded with 0xFF. The web flasher reads
-and writes the same format (`site/flasher.js`), so it can change the name and Wi-Fi settings without
-touching drive or output settings. Keys and defaults: `cfg_defaults()` in `main/config.c`, names in
+and writes the same format (`site/flasher.js`), so it can change the name and address without
+touching drive or output settings. Saved networks are `nets: [{ssid, pw}]` (first = tried first when
+signals are equal); settings from older firmware with `wifi: {ssid, pw}` are moved into `nets`. Keys and defaults: `cfg_defaults()` in `main/config.c`, names in
 `main/config_json.c`.
 
 ## Building
@@ -94,7 +97,9 @@ In the flasher, pick **Custom repo / branch** and enter `owner/repo` and the bra
 | `main/main.c` | Start-up, 100 Hz control loop, rollback confirmation |
 | `main/control.c` | Mixing, outputs, arm / failsafe / battery rules (plain C, tested on a PC) |
 | `main/hw.c` | LEDC motor and servo PWM, battery ADC, WS2812 over RMT |
-| `main/net.c` | Wi-Fi station, reconnect, mDNS |
+| `main/net.c` | Wi-Fi: saved networks, reconnect, backup access point, mDNS |
+| `main/dns.c` | Answers every name with 192.168.4.1 for phones on the access point |
+| `main/improv.c` | Improv Wi-Fi over USB serial, for the flasher's Wi-Fi step |
 | `main/web.c` | HTTP / WebSocket server |
 | `main/ota.c` | Download updates |
 | `main/store.c`, `main/config*.c` | Settings and diagnostics storage |

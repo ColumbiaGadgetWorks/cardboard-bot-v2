@@ -67,13 +67,19 @@ typedef struct {
     uint8_t vbat;                    // battery divider (pack / vdiv)
 } pin_cfg_t;
 
+#define MAX_NETS 5
+typedef struct {
+    char ssid[33];
+    char pw[65];
+} wifi_net_t;
+
 typedef struct {
     char name[24];         // robot name
     char driver[24];       // driver name
     char host[32];         // network name: the page is at http://<host>.local
     char pw[65];           // control password: needed to take over from the driving phone ("" = none)
-    char wifi_ssid[33];    // Wi-Fi the robot joins (2.4 GHz)
-    char wifi_pw[65];
+    wifi_net_t nets[MAX_NETS];  // Wi-Fi networks the robot joins (2.4 GHz); empty ssid = unused slot
+    char ap_pw[65];        // fallback access point password ("" = open, else 8+ characters)
     char src[16];          // firmware source: stable / beta / custom
     char src_url[160];     // custom: base URL of the firmware folder
     bool bsense;           // read the battery voltage
@@ -92,6 +98,10 @@ void cfg_defaults(bot_cfg_t *c);
 bool cfg_from_json(bot_cfg_t *c, const char *json);
 char *cfg_to_json(const bot_cfg_t *c);   // malloc'd, caller frees
 void cfg_sanitize(bot_cfg_t *c);
+int cfg_net_count(const bot_cfg_t *c);
+// Add or update a network and move it to the front (it is tried first). Drops the last one when full.
+void cfg_net_add(bot_cfg_t *c, const char *ssid, const char *pw);
+bool cfg_net_remove(bot_cfg_t *c, const char *ssid);
 bool cfg_pin_ok(int gpio);
 bool cfg_adc_pin_ok(int gpio);
 // Which outputs can run: a valid pin not taken by the motors, LED, battery input or an earlier output
