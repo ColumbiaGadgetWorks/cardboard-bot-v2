@@ -35,6 +35,12 @@
    "version": "2fc739a",
    "date": "2026-10-29T13:03:47+00:00",
    "ref": "main"
+  },
+  {
+   "name": "wifi-improv",
+   "version": "b159dbc",
+   "date": "2026-11-20T16:16:49+00:00",
+   "ref": "wifi-improv"
   }
  ]
 }
